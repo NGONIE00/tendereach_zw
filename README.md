@@ -12,7 +12,7 @@ A WhatsApp-based assistant that takes a tender notice a supplier already found (
 - A document checklist
 - A deadline reminder
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full phased plan, [`docs/ETHICS.md`](docs/ETHICS.md) for the concrete privacy and data-ethics commitments this project makes and keeps, and [`docs/WHATSAPP_FUNNEL.md`](docs/WHATSAPP_FUNNEL.md) for the exact WhatsApp welcome funnel copy currently in use.
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full phased plan, [`docs/ETHICS.md`](docs/ETHICS.md) for the concrete privacy and data-ethics commitments this project makes and keeps, [`docs/WHATSAPP_FUNNEL.md`](docs/WHATSAPP_FUNNEL.md) for the exact WhatsApp welcome funnel copy currently in use, and [`docs/CRM_SCHEMA.md`](docs/CRM_SCHEMA.md) for the two-tier supplier database structure.
 
 ## What this is not
 

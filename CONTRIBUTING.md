@@ -23,6 +23,8 @@ npm run dev
 - **No automated scraping of PRAZ or any government portal.** If a feature seems to require it, stop and raise it as a discussion issue first — this is a deliberate project-wide constraint, not an oversight.
 - **No new data collection field without a corresponding line in `docs/ETHICS.md`.** If you're storing something new, document why, and how long it's retained, in the same pull request.
 - **WhatsApp funnel copy lives in `docs/WHATSAPP_FUNNEL.md` first.** Update that file before changing the live bot's messages, so the two never drift apart.
+- **Prospect data and Founding Supplier data are never merged into one table.** See `docs/CRM_SCHEMA.md`. A prospect only gets a Founding Supplier record after they've actually engaged — never automatically.
+- **No scraping of paid tender-aggregator sites** (Tendertube, TendersInfo, ZimbabweTenders, GlobalTenders, or similar). Tender content comes only from original public sources or from users directly. See `docs/ETHICS.md`.
 - **No public-facing scoring, rating, or reputational claims about named suppliers/agencies.** This is gated behind Phase 4 and a legal review — see the roadmap.
 - **Run `npm audit` before opening a PR** that adds or updates dependencies.
 - **Secrets never touch source control.** If you accidentally commit one, rotate it immediately and note it in the PR — don't just force-push over it.

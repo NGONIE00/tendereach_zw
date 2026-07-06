@@ -13,11 +13,14 @@ If a feature request conflicts with something in this document, the feature is c
 - Tender notice content the user voluntarily forwards or pastes.
 - For the Phase 2 tip-line: a report description and, optionally, supporting evidence (text/photo) the submitter chooses to provide.
 - For the Founding Supplier Programme (WhatsApp welcome funnel, Path 1): name, company name, products/services offered, prior government-supply experience, how they currently discover tenders, their described pain points, and any deadline-related experience they choose to share. This is a deliberately fuller intake than the general assistant, since its explicit purpose is Phase 0 problem validation — see `docs/ROADMAP.md`. Users are told this up front (see Consent, below) and participation is optional; declining does not block access to the core plain-language assistant (Path 2).
+- For the **Prospect List** (outreach sourcing, see "Two-Tier Supplier Data Model" below): company name, industry, general location, and publicly-published business contact info (phone/email/website already listed by the business itself for commercial purposes) sourced from business directories, Chamber of Commerce/SME association listings, company websites, LinkedIn, Facebook, Instagram, and Google Maps business listings. This tier deliberately excludes anything the business hasn't already made public for commercial contact purposes.
 
 **What we do not collect:**
 - No location tracking beyond what the user explicitly states in conversation (e.g. "I'm based in Mutare").
 - No contact list access, no message history beyond the active conversation, no device data.
 - No bulk scraping of PRAZ or any other procurement portal (see `SECURITY.md` and `docs/ROADMAP.md`).
+- No scraping or reuse of data from paid tender-aggregation businesses (e.g. Tendertube, TendersInfo, ZimbabweTenders, GlobalTenders, or similar subscription tender-intelligence products). These are commercial products built on curation effort, not public-domain data, and are treated the same as any other competitor's proprietary product — off limits regardless of technical feasibility. Tender content for TenderReach's own features is sourced only from original public sources (PRAZ eGP, the Government Gazette, ministry/parastatal sites) or from content a user voluntarily shares.
+- No procurement history, interview data, notes, or relationship/pipeline detail is collected about a business until they have actually responded to outreach or opted in (see "Two-Tier Supplier Data Model" below). Being listed in a public directory is not consent to hold anything beyond basic contact/outreach data.
 
 **Retention:**
 - Tender content submitted for summarization is retained only as long as needed to deliver the summary and any active deadline reminder (default: 30 days, configurable via `TENDER_CONTENT_RETENTION_DAYS`), then deleted.
@@ -33,6 +36,27 @@ If a feature request conflicts with something in this document, the feature is c
 
 **Internal lead tagging (e.g. "Founding Lead," "Warm Lead," "Cold Lead," "Pilot User"):**
 - These tags are working labels for TenderReach's own follow-up prioritization only. They are internal notes about engagement stage, not judgments about a person's character or reliability, and they are never shared externally, sold, or used to restrict someone's access to the core assistant.
+
+---
+
+## Two-Tier Supplier Data Model
+
+TenderReach maintains two separate data stores for supplier information, with different rules for each. They must never be merged into a single undifferentiated table.
+
+**Tier 1 — Prospect List**
+- Purpose: knowing which businesses to invite into the Founding Supplier Programme.
+- Fields: company name, industry, general location (province/city), publicly-published business contact info only.
+- Sourced from: business directories, Chamber of Commerce/SME association listings, company websites, LinkedIn, Facebook, Instagram, Google Maps business listings, direct referrals, and field research — never from paid tender-aggregator sites (see above).
+- No procurement history, no pain-point notes, no relationship/pipeline status is stored at this tier — that information doesn't exist yet, because the business hasn't told us anything.
+- A prospect can ask to be removed from outreach at any time; the request is honored and the record deleted, not just marked inactive.
+
+**Tier 2 — Founding Supplier Record**
+- Created only once a prospect responds to outreach, replies to a message, or completes the Airtable onboarding form — i.e., only after they have actively engaged, not merely been found.
+- This is where richer fields belong: procurement experience, discovery habits, described pain points, interview responses, pilot programme status, outreach/interview notes.
+- Governed by the Consent and Retention terms above, in full.
+- A record only moves from Tier 1 to Tier 2 on the basis of the business's own action (a reply, a form submission) — never automatically, and never based on assumptions about interest.
+
+This split exists so that "being findable in a public directory" is never treated as equivalent to "having given TenderReach permission to hold a profile" on a business. The former is normal, low-risk B2B outreach practice; the latter carries real obligations under Zimbabwe's Data Protection Act (2021), particularly around direct marketing and processing of personal/business data, and under TenderReach's own Sovereignty commitment below.
 
 ---
 
@@ -63,3 +87,4 @@ If a feature request conflicts with something in this document, the feature is c
 
 - **[Init]** — Document created alongside initial repo scaffold. No prior versions.
 - **[2026-07-06]** — Added explicit coverage of the Founding Supplier Programme interview (WhatsApp welcome funnel, Path 1): expanded data collection scope, retention terms, pre-interview consent line, skip/stop option, and a note on internal lead-tagging practices.
+- **[2026-07-07]** — Introduced the Two-Tier Supplier Data Model (Prospect List vs. Founding Supplier Record) to govern the Supplier Intelligence CRM; explicitly excluded scraping/reuse of paid tender-aggregator products (e.g. Tendertube, TendersInfo) as an off-limits data source.
