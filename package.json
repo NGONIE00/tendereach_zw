@@ -1,0 +1,11 @@
+{
+  "name": "tendereach",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Plain-language tender support for Zimbabwean suppliers via WhatsApp — Phase 0/1 MVP.",
+  "scripts": {
+    "dev": "echo \"TODO: wire up dev server (see src/whatsapp, src/ai, src/db)\" && exit 0",
+    "audit:check": "npm audit --audit-level=high"
+  },
+  "license": "MIT"
+}
