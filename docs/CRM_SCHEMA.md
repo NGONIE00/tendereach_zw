@@ -35,9 +35,10 @@ Purpose: real profiles, created only once a business has responded to outreach, 
 | Field | Type | Notes |
 |---|---|---|
 | Linked Prospect | Link to Prospects table | If they originated from outreach; optional, since some arrive directly via WhatsApp/organic |
-| Company Name | Single line text | Required |
-| Contact Name | Single line text | |
+| Company Name | Single line text | Required — for automated WhatsApp intake (Q1), may arrive blank pending manual split, see Contact Name note below |
+| Contact Name | Single line text | From interview Q1 — stored as raw text initially (may include both personal name and company name together); split into Contact Name / Company Name on manual review until the AI layer can parse this reliably. |
 | Industry | Single select | Same list as Prospects |
+| Products/Services Offered | Long text | From interview Q2 |
 | Province / City | Single select + text | |
 | Company Size | Single select | Micro, Small, Medium, Large |
 | Phone / WhatsApp / Email / Website | Contact fields | |

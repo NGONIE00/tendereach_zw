@@ -3,6 +3,7 @@ const express = require("express");
 const { route } = require("./router");
 const { sendWhatsAppMessage } = require("./client");
 const sessionStore = require("../db/sessionStore");
+const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByPhone } = require("../db/airtable");
 
 const app = express();
 app.use(express.json());
@@ -60,16 +61,37 @@ async function handleIncomingMessage(fromPhoneNumber, text) {
 
   if (sessionUpdates.__deleteSession) {
     sessionStore.deleteSession(fromPhoneNumber);
+    // Also clear any Airtable record from a completed interview — the
+    // deletion promise in docs/ETHICS.md covers both, not just session
+    // memory. Errors are logged but don't block the confirmation reply.
+    try {
+      const result = await deleteFoundingSupplierRecordByPhone(fromPhoneNumber);
+      if (result.deleted > 0) {
+        console.log(`Deleted ${result.deleted} Airtable record(s) for user-requested deletion.`);
+      }
+    } catch (err) {
+      console.error("Failed to delete Airtable record on user request:", err.message);
+    }
   } else {
     // Strip internal-only signal flags before persisting to session store.
     const { __interviewCompleted, ...cleanUpdates } = sessionUpdates;
     sessionStore.setSession(fromPhoneNumber, cleanUpdates);
 
     if (__interviewCompleted) {
-      // TODO: persist session.interviewAnswers into the Founding Suppliers
-      // Airtable/Supabase record here — see docs/CRM_SCHEMA.md. Not yet
-      // wired up; this is where that integration will plug in.
-      console.log(`Interview completed for a user — ready to persist to CRM.`);
+      // Persist to the Founding Suppliers Airtable table (docs/CRM_SCHEMA.md).
+      // Wrapped so a persistence failure never blocks the WhatsApp reply
+      // already queued below — the user still gets their completion
+      // message even if the CRM write needs manual retry.
+      try {
+        const updatedSession = sessionStore.getSession(fromPhoneNumber);
+        await createFoundingSupplierRecord(updatedSession);
+        console.log("Founding Supplier record created in Airtable.");
+      } catch (err) {
+        console.error(
+          "Failed to persist completed interview to Airtable — needs manual follow-up:",
+          err.message
+        );
+      }
     }
   }
 

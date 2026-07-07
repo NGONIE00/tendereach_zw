@@ -11,9 +11,9 @@
 ## Status
 
 - Menu routing (Paths 1–4) is implemented and tested.
-- The Founding Supplier interview (Path 1, Q1–Q7) is implemented, including graceful "stop"/"skip" mid-interview and a completion signal (`__interviewCompleted`) that marks where CRM persistence (`docs/CRM_SCHEMA.md`) will plug in — not yet wired to Airtable/Supabase.
+- The Founding Supplier interview (Path 1, Q1–Q7) is implemented, including graceful "stop"/"skip" mid-interview. On completion, responses are persisted directly to the Founding Suppliers Airtable table via `src/db/airtable.js` (see `docs/CRM_SCHEMA.md` for the field mapping). A persistence failure is logged for manual follow-up but never blocks the user's completion reply.
 - Path 2 sends the placeholder response only — no AI answering yet.
-- "delete my data" is handled by the router but session storage is in-memory only right now, so this doesn't yet reflect a real production guarantee — fix this before treating the deletion promise in `docs/ETHICS.md` as live.
+- "delete my data" clears both the in-memory session and any matching Airtable record (by phone number lookup) via `deleteFoundingSupplierRecordByPhone`. The in-memory session store itself is still not production-durable (see the warning in `sessionStore.js`) — swap it for Supabase before relying on it for anything beyond local testing.
 
 ## Running locally
 
