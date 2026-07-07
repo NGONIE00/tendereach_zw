@@ -21,7 +21,7 @@ We aim to acknowledge reports within 5 business days.
 - **No plaintext phone number logging in application logs.** Phone numbers are the primary identifier in a WhatsApp-based tool and are treated as sensitive personal data.
 - **Least privilege.** Any database or API credentials used should have the minimum scope needed (e.g. a Supabase service role key should never be exposed client-side).
 - **Encrypted transport only.** All external calls (WhatsApp Business API, AI provider, database) must use HTTPS/TLS — no exceptions.
-- **Rate limiting on inbound messages** to prevent abuse of the AI summarization pipeline (cost control and misuse prevention).
+- **Rate limiting on inbound messages** to prevent abuse of the AI summarization pipeline (cost control and misuse prevention). Implemented in `src/whatsapp/rateLimiter.js` — default 20 messages per 10-minute sliding window per phone number, configurable via `RATE_LIMIT_MAX_MESSAGES` / `RATE_LIMIT_WINDOW_MS`.
 
 ## Known Sensitive Areas
 

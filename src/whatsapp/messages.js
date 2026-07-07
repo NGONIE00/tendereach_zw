@@ -88,6 +88,10 @@ In the meantime, you can also join our Founding Supplier Programme for faster su
   },
 
   dataDeletionConfirmed: `Done — your data has been deleted from our systems. If you'd like to start again anytime, just reply "START".`,
+
+  unsupportedMessageType: `Thanks for sending that 🙏 Right now I can only read text messages. Please type your response, or reply "menu" to see the options again.`,
+
+  rateLimited: `You've sent quite a few messages in a short time 🙏 Please wait a few minutes before sending another — this helps us keep things running smoothly for everyone.`,
 };
 
 module.exports = messages;

@@ -4,6 +4,8 @@ const { route } = require("./router");
 const { sendWhatsAppMessage } = require("./client");
 const sessionStore = require("../db/sessionStore");
 const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByPhone } = require("../db/airtable");
+const { checkRateLimit } = require("./rateLimiter");
+const messages = require("./messages");
 
 const app = express();
 app.use(express.json());
@@ -27,10 +29,15 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 /**
  * Inbound message handler. Meta sends a POST here for every incoming
  * message, delivery status update, etc. — we only act on actual text
- * messages from users.
+ * messages from users; other message types get a graceful reply instead
+ * of being silently dropped.
  */
 app.post("/webhook", async (req, res) => {
   // Respond fast — Meta expects a 200 quickly regardless of processing time.
@@ -42,11 +49,25 @@ app.post("/webhook", async (req, res) => {
     const value = change && change.value;
     const message = value && value.messages && value.messages[0];
 
-    if (!message || message.type !== "text") {
-      return; // Ignore non-text messages, status updates, etc. for now.
+    if (!message) {
+      return; // Status updates, read receipts, etc. — nothing to reply to.
     }
 
     const fromPhoneNumber = message.from;
+
+    if (message.type !== "text") {
+      // Graceful reply instead of silently dropping — see
+      // docs/WHATSAPP_FUNNEL.md, System Messages.
+      await sendWhatsAppMessage(fromPhoneNumber, messages.unsupportedMessageType);
+      return;
+    }
+
+    const rateLimitResult = checkRateLimit(fromPhoneNumber);
+    if (!rateLimitResult.allowed) {
+      await sendWhatsAppMessage(fromPhoneNumber, messages.rateLimited);
+      return;
+    }
+
     const text = message.text.body;
 
     await handleIncomingMessage(fromPhoneNumber, text);

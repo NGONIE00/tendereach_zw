@@ -160,6 +160,26 @@ In the meantime, you can also join our Founding Supplier Programme for faster su
 
 ---
 
+---
+
+## System Messages (Non-Menu Replies)
+
+These fire regardless of which path the user is on.
+
+### Unsupported message type (image, document, audio, etc.)
+
+```
+Thanks for sending that 🙏 Right now I can only read text messages. Please type your response, or reply "menu" to see the options again.
+```
+
+### Rate limit reached
+
+```
+You've sent quite a few messages in a short time 🙏 Please wait a few minutes before sending another — this helps us keep things running smoothly for everyone.
+```
+
+---
+
 ## 🧠 Internal Lead Tags (Reference Only — Never Shown to Users)
 
 | Action | Tag |

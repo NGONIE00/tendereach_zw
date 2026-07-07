@@ -13,6 +13,8 @@
 - Menu routing (Paths 1–4) is implemented and tested.
 - The Founding Supplier interview (Path 1, Q1–Q7) is implemented, including graceful "stop"/"skip" mid-interview. On completion, responses are persisted directly to the Founding Suppliers Airtable table via `src/db/airtable.js` (see `docs/CRM_SCHEMA.md` for the field mapping). A persistence failure is logged for manual follow-up but never blocks the user's completion reply.
 - Path 2 sends the placeholder response only — no AI answering yet.
+- Rate limiting (`src/whatsapp/rateLimiter.js`) and graceful handling of non-text messages (images, documents, audio) are implemented — neither silently drops nor crashes, both reply with a clear message. See `docs/WHATSAPP_FUNNEL.md`, System Messages.
+- A `GET /health` endpoint is available for uptime monitoring.
 - "delete my data" clears both the session (Supabase or in-memory, whichever is active) and any matching Airtable record (by phone number lookup) via `deleteFoundingSupplierRecordByPhone`. Run the migration in `supabase/migrations/001_whatsapp_sessions.sql` and set `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` before relying on this in production — without them, sessions fall back to in-memory and won't survive a server restart.
 
 ## Running locally
