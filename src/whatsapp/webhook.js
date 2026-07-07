@@ -56,11 +56,11 @@ app.post("/webhook", async (req, res) => {
 });
 
 async function handleIncomingMessage(fromPhoneNumber, text) {
-  const session = sessionStore.getSession(fromPhoneNumber);
+  const session = await sessionStore.getSession(fromPhoneNumber);
   const { reply, sessionUpdates } = route(session, text);
 
   if (sessionUpdates.__deleteSession) {
-    sessionStore.deleteSession(fromPhoneNumber);
+    await sessionStore.deleteSession(fromPhoneNumber);
     // Also clear any Airtable record from a completed interview — the
     // deletion promise in docs/ETHICS.md covers both, not just session
     // memory. Errors are logged but don't block the confirmation reply.
@@ -75,7 +75,7 @@ async function handleIncomingMessage(fromPhoneNumber, text) {
   } else {
     // Strip internal-only signal flags before persisting to session store.
     const { __interviewCompleted, ...cleanUpdates } = sessionUpdates;
-    sessionStore.setSession(fromPhoneNumber, cleanUpdates);
+    const updatedSession = await sessionStore.setSession(fromPhoneNumber, cleanUpdates);
 
     if (__interviewCompleted) {
       // Persist to the Founding Suppliers Airtable table (docs/CRM_SCHEMA.md).
@@ -83,7 +83,6 @@ async function handleIncomingMessage(fromPhoneNumber, text) {
       // already queued below — the user still gets their completion
       // message even if the CRM write needs manual retry.
       try {
-        const updatedSession = sessionStore.getSession(fromPhoneNumber);
         await createFoundingSupplierRecord(updatedSession);
         console.log("Founding Supplier record created in Airtable.");
       } catch (err) {
@@ -100,7 +99,11 @@ async function handleIncomingMessage(fromPhoneNumber, text) {
 
 // Periodically purge expired sessions per the retention window in
 // docs/ETHICS.md. Every hour is reasonable for an early-stage deployment.
-setInterval(() => sessionStore.purgeExpiredSessions(), 60 * 60 * 1000);
+setInterval(() => {
+  sessionStore.purgeExpiredSessions().catch((err) =>
+    console.error("purgeExpiredSessions failed:", err.message)
+  );
+}, 60 * 60 * 1000);
 
 app.listen(PORT, () => {
   console.log(`TenderReach WhatsApp webhook listening on port ${PORT}`);

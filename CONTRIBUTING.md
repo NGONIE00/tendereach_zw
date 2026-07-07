@@ -15,8 +15,11 @@ git clone <repo-url>
 cd tendereach
 cp .env.example .env   # then fill in real values — never commit .env
 npm install
+npm test
 npm run dev
 ```
+
+If using Supabase for session storage (recommended for anything beyond local testing), run the migration in `supabase/migrations/001_whatsapp_sessions.sql` against your project before setting `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` in `.env`. Without those two vars set, the app automatically falls back to an in-memory session store suitable for local development only.
 
 ## Ground rules for any change
 
