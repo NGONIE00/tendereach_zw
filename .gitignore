@@ -1,0 +1,41 @@
+# Secrets & environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Test / coverage
+coverage/
+
+# Local database files (if using sqlite locally)
+*.sqlite
+*.db
+
+# Any locally-collected sample tender data (must never be committed — see docs/ETHICS.md)
+/sample-data/
+/local-data/
