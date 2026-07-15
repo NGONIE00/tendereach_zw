@@ -1,9 +1,15 @@
 const Airtable = require("airtable");
 
 /**
+<<<<<<< HEAD
  * Writes a completed Founding Supplier interview into the Founding
  * Suppliers Airtable table — see docs/CRM_SCHEMA.md for the full field
  * reference. Works for any channel (WhatsApp, Messenger, Instagram).
+=======
+ * Writes a completed WhatsApp Founding Supplier interview into the
+ * Founding Suppliers Airtable table — see docs/CRM_SCHEMA.md for the
+ * full field reference.
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
  *
  * Field mapping notes:
  * - Q1 (name + company) arrives as one free-text answer. We store it
@@ -12,12 +18,17 @@ const Airtable = require("airtable");
  * - Consent Given is always set true here, since reaching this function
  *   means the user completed the full interview after the consent line
  *   in messages.path1.intro (see docs/ETHICS.md).
+<<<<<<< HEAD
  * - "Contact ID" is `${channel}:${externalId}` — the stable lookup key
  *   used for deletion requests regardless of channel. "Phone" is only
  *   populated when channel === 'whatsapp', since Messenger/Instagram IDs
  *   aren't phone numbers — see docs/MULTI_CHANNEL_ARCHITECTURE.md.
  */
 async function createFoundingSupplierRecord(session, channel, externalId) {
+=======
+ */
+async function createFoundingSupplierRecord(session) {
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
   const tableName = process.env.AIRTABLE_FOUNDING_SUPPLIERS_TABLE || "Founding Suppliers";
@@ -40,9 +51,13 @@ async function createFoundingSupplierRecord(session, channel, externalId) {
     "Hardest Part of Applying": q5Hardest || "",
     "Deadline Experience": q6Deadline || "",
     "Top Problem to Solve": q7TopProblem || "",
+<<<<<<< HEAD
     "Channel": capitalize(channel),
     "Contact ID": `${channel}:${externalId}`,
     "Phone": channel === "whatsapp" ? externalId : "",
+=======
+    "Phone": session.phoneNumber,
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
     "Consent Given": true,
     "Interview Status": "Completed",
     "Internal Tag": session.internalTag || "Pilot User",
@@ -59,11 +74,14 @@ async function createFoundingSupplierRecord(session, channel, externalId) {
   });
 }
 
+<<<<<<< HEAD
 function capitalize(word) {
   if (!word) return "";
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
+=======
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
 /**
  * Best-effort normalization of the free-text Yes/No/Occasionally answer
  * (Q3) into one of Airtable's exact single-select option strings. Falls
@@ -80,6 +98,7 @@ function normalizeYesNo(rawAnswer) {
 }
 
 /**
+<<<<<<< HEAD
  * Finds and deletes any Founding Supplier record matching a channel +
  * external ID pair. Used when a user replies "delete my data" — see
  * docs/ETHICS.md, which promises deletion on request, not just session
@@ -87,6 +106,15 @@ function normalizeYesNo(rawAnswer) {
  * they never completed the interview) rather than erroring.
  */
 async function deleteFoundingSupplierRecordByContact(channel, externalId) {
+=======
+ * Finds and deletes any Founding Supplier record matching a phone number.
+ * Used when a user replies "delete my data" — see docs/ETHICS.md, which
+ * promises deletion on request, not just session-memory clearing.
+ * Silently does nothing if no matching record exists (e.g. they never
+ * completed the interview) rather than erroring.
+ */
+async function deleteFoundingSupplierRecordByPhone(phoneNumber) {
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
   const apiKey = process.env.AIRTABLE_API_KEY;
   const baseId = process.env.AIRTABLE_BASE_ID;
   const tableName = process.env.AIRTABLE_FOUNDING_SUPPLIERS_TABLE || "Founding Suppliers";
@@ -96,11 +124,18 @@ async function deleteFoundingSupplierRecordByContact(channel, externalId) {
   }
 
   const base = new Airtable({ apiKey }).base(baseId);
+<<<<<<< HEAD
   const contactId = `${channel}:${externalId}`;
 
   return new Promise((resolve, reject) => {
     base(tableName)
       .select({ filterByFormula: `{Contact ID} = "${contactId}"` })
+=======
+
+  return new Promise((resolve, reject) => {
+    base(tableName)
+      .select({ filterByFormula: `{Phone} = "${phoneNumber}"` })
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
       .firstPage((err, records) => {
         if (err) return reject(err);
         if (!records || records.length === 0) return resolve({ deleted: 0 });
@@ -114,8 +149,16 @@ async function deleteFoundingSupplierRecordByContact(channel, externalId) {
   });
 }
 
+<<<<<<< HEAD
 module.exports = { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact };
 
 // Exposed only for unit testing internal helpers — not part of the public
 // module API. See src/db/airtable.test.js.
 module.exports.__test__ = { normalizeYesNo, capitalize };
+=======
+module.exports = { createFoundingSupplierRecord, deleteFoundingSupplierRecordByPhone };
+
+// Exposed only for unit testing internal helpers — not part of the public
+// module API. See src/db/airtable.test.js.
+module.exports.__test__ = { normalizeYesNo };
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420

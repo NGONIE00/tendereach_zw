@@ -4,14 +4,21 @@
   "private": true,
   "description": "Plain-language tender support for Zimbabwean suppliers via WhatsApp — Phase 0/1 MVP.",
   "scripts": {
+<<<<<<< HEAD
     "dev": "node src/server.js",
+=======
+    "dev": "node src/whatsapp/webhook.js",
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
     "test": "jest",
     "audit:check": "npm audit --audit-level=high"
   },
   "license": "MIT",
   "dependencies": {
+<<<<<<< HEAD
     "@supabase/supabase-js": "^2.110.0",
     "airtable": "^0.12.2",
+=======
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
     "axios": "^1.18.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"

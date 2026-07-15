@@ -28,7 +28,10 @@ If using Supabase for session storage (recommended for anything beyond local tes
 - **WhatsApp funnel copy lives in `docs/WHATSAPP_FUNNEL.md` first.** Update that file before changing the live bot's messages, so the two never drift apart.
 - **Prospect data and Founding Supplier data are never merged into one table.** See `docs/CRM_SCHEMA.md`. A prospect only gets a Founding Supplier record after they've actually engaged — never automatically.
 - **No scraping of paid tender-aggregator sites** (Tendertube, TendersInfo, ZimbabweTenders, GlobalTenders, or similar). Tender content comes only from original public sources or from users directly. See `docs/ETHICS.md`.
+<<<<<<< HEAD
 - **Funnel logic changes go in `src/funnel/` only.** Never duplicate routing, message copy, or interview logic inside a channel adapter (`src/whatsapp/`, `src/messenger/`, `src/instagram/`) — those should only ever contain payload parsing and sending. See `docs/MULTI_CHANNEL_ARCHITECTURE.md`.
+=======
+>>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
 - **No public-facing scoring, rating, or reputational claims about named suppliers/agencies.** This is gated behind Phase 4 and a legal review — see the roadmap.
 - **Run `npm audit` before opening a PR** that adds or updates dependencies.
 - **Secrets never touch source control.** If you accidentally commit one, rotate it immediately and note it in the PR — don't just force-push over it.
