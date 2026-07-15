@@ -27,3 +27,16 @@ describe("normalizeYesNo (Q3 answer normalization)", () => {
     expect(__test__.normalizeYesNo(undefined)).toBe("");
   });
 });
+
+describe("capitalize (Channel field mapping)", () => {
+  test("capitalizes the first letter of a channel name", () => {
+    expect(__test__.capitalize("whatsapp")).toBe("Whatsapp");
+    expect(__test__.capitalize("messenger")).toBe("Messenger");
+    expect(__test__.capitalize("instagram")).toBe("Instagram");
+  });
+
+  test("empty/undefined input returns an empty string", () => {
+    expect(__test__.capitalize("")).toBe("");
+    expect(__test__.capitalize(undefined)).toBe("");
+  });
+});
