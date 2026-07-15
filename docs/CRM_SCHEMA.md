@@ -37,11 +37,13 @@ Purpose: real profiles, created only once a business has responded to outreach, 
 | Linked Prospect | Link to Prospects table | If they originated from outreach; optional, since some arrive directly via WhatsApp/organic |
 | Company Name | Single line text | Required — for automated WhatsApp intake (Q1), may arrive blank pending manual split, see Contact Name note below |
 | Contact Name | Single line text | From interview Q1 — stored as raw text initially (may include both personal name and company name together); split into Contact Name / Company Name on manual review until the AI layer can parse this reliably. |
+| Channel | Single select | WhatsApp, Messenger, Instagram — see `docs/MULTI_CHANNEL_ARCHITECTURE.md` |
+| Contact ID | Single line text | `${channel}:${externalId}` — the stable lookup key used for deletion requests across all channels |
 | Industry | Single select | Same list as Prospects |
 | Products/Services Offered | Long text | From interview Q2 |
 | Province / City | Single select + text | |
 | Company Size | Single select | Micro, Small, Medium, Large |
-| Phone / WhatsApp / Email / Website | Contact fields | |
+| Phone / WhatsApp / Email / Website | Contact fields | Phone is only populated when Channel = WhatsApp (auto-filled on interview completion); the others remain manual/optional |
 | LinkedIn / Facebook / Instagram / Google Maps | URL fields | Optional, only if the supplier shares them |
 | Government Supplier Status | Single select | Yes, No, Occasionally |
 | NGO Supplier Status | Single select | Yes, No, Occasionally |
