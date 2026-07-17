@@ -27,7 +27,6 @@ describe("normalizeYesNo (Q3 answer normalization)", () => {
     expect(__test__.normalizeYesNo(undefined)).toBe("");
   });
 });
-<<<<<<< HEAD
 
 describe("capitalize (Channel field mapping)", () => {
   test("capitalizes the first letter of a channel name", () => {
@@ -41,5 +40,3 @@ describe("capitalize (Channel field mapping)", () => {
     expect(__test__.capitalize(undefined)).toBe("");
   });
 });
-=======
->>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420

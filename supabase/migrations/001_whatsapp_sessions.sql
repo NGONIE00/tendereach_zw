@@ -10,16 +10,12 @@
 -- not here.
 
 create table if not exists whatsapp_sessions (
-<<<<<<< HEAD
   phone_number text primary key, -- now used as a generic channel-prefixed
                                   -- session key (e.g. "whatsapp:263...",
                                   -- "messenger:892..."), not phone numbers
                                   -- only — see docs/MULTI_CHANNEL_ARCHITECTURE.md.
                                   -- Column name kept as-is to avoid an
                                   -- unnecessary migration; it's just a string key.
-=======
-  phone_number text primary key,
->>>>>>> 91cf82ea2ebc1ddb33cc55fed080127e6a650420
   current_path text, -- null | 'path1' | 'path2' | 'path3' | 'path4'
   interview_step integer not null default 0,
   interview_answers jsonb not null default '[]'::jsonb,
