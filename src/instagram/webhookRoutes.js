@@ -35,6 +35,10 @@ router.get("/", (req, res) => {
 router.post("/", async (req, res) => {
   res.sendStatus(200); // Meta expects a fast 200 regardless of processing time.
 
+  // TEMPORARY DEBUG LOGGING — remove once the real payload shape is
+  // confirmed and parsing below is adjusted to match it.
+  console.log("[instagram] RAW PAYLOAD:", JSON.stringify(req.body, null, 2));
+
   try {
     if (req.body.object !== "instagram") return;
 

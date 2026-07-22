@@ -3,165 +3,159 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tender Reach — Compliant Procurement. Confident Futures.</title>
-<meta name="description" content="Tender Reach helps Zimbabwean businesses discover, understand, and prepare for public procurement opportunities.">
-<style>
-  :root {
-    --navy: #1B2A4A;
-    --green: #3A8B3E;
-    --green-light: #4CAF50;
-    --bg: #FAFAF8;
-    --text: #22252B;
-    --muted: #5A5F6B;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.6;
-  }
-  header {
-    background: var(--navy);
-    color: white;
-    padding: 20px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  header .brand {
-    font-weight: 800;
-    font-size: 1.3rem;
-    letter-spacing: 0.5px;
-  }
-  header .brand span { color: var(--green-light); }
-  nav a {
-    color: white;
-    text-decoration: none;
-    margin-left: 24px;
-    font-size: 0.95rem;
-    opacity: 0.9;
-  }
-  nav a:hover { opacity: 1; text-decoration: underline; }
-  .hero {
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 72px 24px 56px;
-    text-align: center;
-  }
-  .hero h1 {
-    font-size: 2.4rem;
-    color: var(--navy);
-    margin-bottom: 16px;
-    line-height: 1.25;
-  }
-  .hero h1 span { color: var(--green); }
-  .hero p {
-    font-size: 1.15rem;
-    color: var(--muted);
-    max-width: 560px;
-    margin: 0 auto 28px;
-  }
-  .cta {
-    display: inline-block;
-    background: var(--green);
-    color: white;
-    padding: 14px 28px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 1rem;
-  }
-  .cta:hover { background: var(--green-light); }
-  section {
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 48px 24px;
-    border-top: 1px solid #E3E3DD;
-  }
-  section h2 {
-    color: var(--navy);
-    font-size: 1.5rem;
-    margin-bottom: 16px;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
-  }
-  .card {
-    background: white;
-    border: 1px solid #E3E3DD;
-    border-radius: 8px;
-    padding: 20px;
-  }
-  .card h3 {
-    color: var(--navy);
-    font-size: 1rem;
-    margin-bottom: 8px;
-  }
-  .card p { color: var(--muted); font-size: 0.92rem; }
-  footer {
-    text-align: center;
-    padding: 40px 24px;
-    color: var(--muted);
-    font-size: 0.88rem;
-    border-top: 1px solid #E3E3DD;
-  }
-  footer a { color: var(--navy); }
-</style>
+<title>Tender Reach — Public procurement, made clear</title>
+<meta name="description" content="Tender Reach helps Zimbabwean businesses discover, understand, and prepare for public procurement opportunities — in plain language, on WhatsApp.">
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<header>
-  <div class="brand">TENDER <span>REACH</span></div>
-  <nav>
-    <a href="#about">About</a>
-    <a href="#whatsapp">WhatsApp</a>
-    <a href="#contact">Contact</a>
-  </nav>
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.png" alt="Tender Reach logo">
+      TENDER <span>REACH</span>
+    </a>
+    <button class="nav-toggle" aria-label="Open menu">☰</button>
+    <div class="nav-links">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+    </div>
+    <div class="nav-actions">
+      <button class="theme-toggle" aria-label="Toggle dark mode">☾</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero container">
+  <div class="hero-grid">
+    <div>
+      <span class="eyebrow">Civic tech · Zimbabwe</span>
+      <h1>Public procurement,<br>made <span class="accent">clear</span>.</h1>
+      <p class="lede">Tender Reach helps Zimbabwean businesses discover, understand, and prepare for public procurement opportunities — clearly, transparently, and without the confusion.</p>
+      <a href="contact.html" class="btn">Start on WhatsApp →</a>
+    </div>
+    <div class="hero-badge">
+      <img src="assets/logo.png" alt="Tender Reach seal — Transparent, Accountable, Secure, Reliable">
+    </div>
+  </div>
 </header>
 
-<div class="hero">
-  <h1>Public procurement, made <span>clear</span>.</h1>
-  <p>Tender Reach helps Zimbabwean businesses discover, understand, and prepare for public procurement opportunities — clearly, transparently, and without the confusion.</p>
-  <a class="cta" href="#whatsapp">Get started on WhatsApp</a>
-</div>
-
-<section id="about">
-  <h2>What we do</h2>
-  <p>Tender Reach is building tools that make tender participation easier, clearer, and more successful for suppliers across Zimbabwe — starting with plain-language guidance and support delivered directly on WhatsApp.</p>
-  <div class="grid">
+<section class="container section-border-top">
+  <div class="section-head">
+    <span class="eyebrow">What we do</span>
+    <h2>Three ways we help you win more tenders</h2>
+    <p>Built around the real gaps suppliers told us about — not a guess at what government portals are missing.</p>
+  </div>
+  <div class="card-grid">
     <div class="card">
+      <span class="icon">🔍</span>
       <h3>Tender discovery</h3>
-      <p>Helping suppliers find opportunities relevant to their business.</p>
+      <p>Helping suppliers find opportunities relevant to their industry and location, so nothing relevant slips past unnoticed.</p>
     </div>
     <div class="card">
+      <span class="icon">📄</span>
       <h3>Document guidance</h3>
-      <p>Plain-language explanations of what's required to apply.</p>
+      <p>Plain-language explanations of what's required to apply — no procurement jargon, no guessing at what a clause means.</p>
     </div>
     <div class="card">
+      <span class="icon">🤝</span>
       <h3>Supplier support</h3>
-      <p>Direct, human-first assistance through the process.</p>
+      <p>Direct, human-first assistance through the process, from a team that actually answers.</p>
     </div>
   </div>
 </section>
 
-<section id="whatsapp">
-  <h2>Join on WhatsApp</h2>
-  <p>Tender Reach is currently onboarding a small group of Founding Suppliers to help shape what we build. Message us on WhatsApp to get started.</p>
+<section class="container section-border-top">
+  <div class="section-head">
+    <span class="eyebrow">How it works</span>
+    <h2>From first message to a submitted bid</h2>
+  </div>
+  <div class="process">
+    <div class="process-step">
+      <span class="num">01</span>
+      <h4>Message us on WhatsApp</h4>
+      <p>Send "START" and choose what you need — no app to install.</p>
+    </div>
+    <div class="process-step">
+      <span class="num">02</span>
+      <h4>Share a tender notice</h4>
+      <p>Forward one you've already found, from PRAZ or elsewhere.</p>
+    </div>
+    <div class="process-step">
+      <span class="num">03</span>
+      <h4>Get a plain-language summary</h4>
+      <p>Requirements, deadlines, and a document checklist — explained simply.</p>
+    </div>
+    <div class="process-step">
+      <span class="num">04</span>
+      <h4>Apply with confidence</h4>
+      <p>Clear on what's needed and when it's due.</p>
+    </div>
+  </div>
 </section>
 
-<section id="contact">
-  <h2>Contact</h2>
-  <p>Email: <a href="mailto:hello@tendereach.example">hello@tendereach.example</a></p>
-  <p>Based in Zimbabwe.</p>
+<section class="container section-border-top">
+  <div class="section-head">
+    <span class="eyebrow">Our commitment</span>
+    <h2>Built on four principles</h2>
+  </div>
+  <div class="badge-strip">
+    <span class="badge-pill">Transparent</span>
+    <span class="badge-pill">Accountable</span>
+    <span class="badge-pill">Secure</span>
+    <span class="badge-pill">Reliable</span>
+  </div>
 </section>
 
-<footer>
-  &copy; 2026 Tender Reach. Compliant procurement. Confident futures.
+<section class="container section-border-top">
+  <div class="cta-band">
+    <h2>Join the Founding Supplier Circle</h2>
+    <p>We're inviting a small group of suppliers to help shape Tender Reach before we build further — and get early access to what comes next.</p>
+    <a href="about.html#founding-supplier-programme" class="btn" style="background:#FFFFFF; color:var(--ledger-navy);">Learn about the programme</a>
+  </div>
+</section>
+
+<footer class="footer container">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="index.html" class="brand"><img src="assets/logo.png" alt="Tender Reach logo">TENDER <span>REACH</span></a>
+      <p>Helping Zimbabwean suppliers navigate public procurement with confidence.</p>
+    </div>
+    <div>
+      <h4>Site</h4>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="about.html">About</a></li>
+        <li><a href="contact.html">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Programme</h4>
+      <ul>
+        <li><a href="about.html#founding-supplier-programme">Founding Suppliers</a></li>
+        <li><a href="about.html#how-it-works">How it works</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="https://wa.me/263785128177?text=START">WhatsApp</a></li>
+        <li><a href="mailto:hello@tendereach.zw">hello@tendereach.zw</a></li>
+        <li>Based in Zimbabwe</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Tender Reach. Not affiliated with PRAZ or the Government of Zimbabwe.</span>
+    <span class="legal-links">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms &amp; Conditions</a>
+    </span>
+  </div>
 </footer>
 
+<script src="script.js"></script>
 </body>
 </html>
