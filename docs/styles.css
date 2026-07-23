@@ -171,17 +171,35 @@ a { color: var(--field-green); }
 /* ---------- Hero ---------- */
 
 .hero {
-  padding: 72px 0 56px;
+  position: relative;
+  overflow: hidden;
+  padding: 96px 0 72px;
+  text-align: center;
 }
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 40px;
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
 }
-@media (max-width: 860px) {
-  .hero-grid { grid-template-columns: 1fr; text-align: center; }
-  .hero-badge { order: -1; }
+.hero-bg-img {
+  width: min(680px, 88vw);
+  opacity: 0.13;
+  filter: saturate(1.05);
+}
+.hero-bg-dark { display: none; }
+[data-theme="dark"] .hero-bg-light { display: none; }
+[data-theme="dark"] .hero-bg-dark { display: block; }
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .eyebrow {
@@ -204,24 +222,7 @@ a { color: var(--field-green); }
   font-size: 1.15rem;
   color: var(--slate);
   max-width: 480px;
-  margin: 0 0 28px;
-}
-@media (max-width: 860px) { .hero p.lede { margin-left: auto; margin-right: auto; } }
-
-.hero-badge {
-  display: flex;
-  justify-content: center;
-}
-.hero-badge img {
-  width: min(320px, 80%);
-  animation: spin 40s linear infinite;
-}
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-badge img { animation: none; }
+  margin: 0 auto 28px;
 }
 
 /* ---------- Buttons ---------- */
@@ -373,6 +374,23 @@ section { padding: 56px 0; }
   transition: border-color 0.2s ease, transform 0.15s ease;
 }
 .contact-option:hover { border-color: var(--field-green); transform: translateY(-2px); }
+.contact-option-disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.contact-option-disabled:hover { border-color: var(--hairline); transform: none; }
+.soon-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--hairline);
+  color: var(--slate);
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
 .contact-option .icon { font-size: 1.8rem; }
 .contact-option h3 { margin: 0; font-size: 1.05rem; color: var(--ink); font-family: var(--font-body); font-weight: 600; }
 .contact-option p { margin: 0; color: var(--slate); font-size: 0.88rem; }
