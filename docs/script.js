@@ -44,5 +44,52 @@
         navLinks.classList.toggle("open");
       });
     }
+
+    initCarousels();
   });
+
+  function initCarousels() {
+    var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    document.querySelectorAll(".card-carousel").forEach(function (carousel) {
+      var track = carousel.querySelector(".card-track");
+      var dots = carousel.querySelectorAll(".dot");
+      var slides = track.children;
+      var total = slides.length;
+      var index = 0;
+      var timer = null;
+      var intervalMs = parseInt(carousel.getAttribute("data-autoplay") || "4500", 10);
+
+      function goTo(newIndex) {
+        index = (newIndex + total) % total;
+        track.style.transform = "translateX(-" + index * 100 + "%)";
+        dots.forEach(function (dot, i) {
+          dot.classList.toggle("active", i === index);
+        });
+      }
+
+      function startTimer() {
+        if (prefersReduced) return; // respect reduced-motion: no autoplay
+        clearInterval(timer);
+        timer = setInterval(function () {
+          goTo(index + 1);
+        }, intervalMs);
+      }
+
+      dots.forEach(function (dot) {
+        dot.addEventListener("click", function () {
+          goTo(parseInt(dot.getAttribute("data-index"), 10));
+          startTimer();
+        });
+      });
+
+      carousel.addEventListener("mouseenter", function () {
+        clearInterval(timer);
+      });
+      carousel.addEventListener("mouseleave", startTimer);
+
+      goTo(0);
+      startTimer();
+    });
+  }
 })();

@@ -204,8 +204,9 @@ a { color: var(--field-green); }
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--field-green);
   margin-bottom: 12px;
@@ -262,12 +263,34 @@ section { padding: 56px 0; }
 
 /* ---------- Cards ---------- */
 
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+.card-carousel {
+  position: relative;
+  max-width: 560px;
+  margin: 0 auto;
+  overflow: hidden;
 }
-@media (max-width: 760px) { .card-grid { grid-template-columns: 1fr; } }
+.card-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-track .card { flex: 0 0 100%; }
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: none;
+  background: var(--hairline);
+  cursor: pointer;
+  padding: 0;
+}
+.dot.active { background: var(--field-green); }
 
 .card {
   background: var(--card);
@@ -404,7 +427,7 @@ section { padding: 56px 0; }
 }
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
   gap: 32px;
   margin-bottom: 32px;
 }
@@ -426,15 +449,14 @@ section { padding: 56px 0; }
 .footer-brand p { color: var(--slate); font-size: 0.92rem; max-width: 280px; }
 
 .footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  text-align: center;
   padding-top: 24px;
   border-top: 1px solid var(--hairline);
   font-size: 0.85rem;
   color: var(--slate);
 }
-.footer-bottom .legal-links a { color: var(--slate); margin-left: 18px; }
-.footer-bottom .legal-links a:hover { color: var(--field-green); }
+
+/* ---------- Theme-swapped brand icons (nav + footer) ---------- */
+.brand-icon-dark { display: none; }
+[data-theme="dark"] .brand-icon-light { display: none; }
+[data-theme="dark"] .brand-icon-dark { display: inline-block; }
