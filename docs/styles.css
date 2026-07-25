@@ -292,16 +292,21 @@ section { padding: 56px 0; }
 }
 .dot.active { background: var(--field-green); }
 
-.card {
-  background: var(--card);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  padding: 28px;
-  box-shadow: 0 4px 16px var(--shadow);
-}
-.card h3 { font-size: 1.15rem; margin-bottom: 10px; }
+.card { background: var(--card); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 28px; box-shadow: 0 4px 16px var(--shadow); }
+.card h3 { font-size: 1.15rem; margin-bottom: 6px; }
+.card .tagline { font-weight: 600; color: var(--ink); font-size: 0.95rem; margin: 0 0 12px; }
 .card p { color: var(--slate); font-size: 0.95rem; margin: 0; }
-.card .icon { font-size: 1.6rem; margin-bottom: 14px; display: block; }
+.card p.tagline { color: var(--ink); }
+
+.card-icon {
+  width: 64px;
+  height: auto;
+  margin-bottom: 16px;
+  display: block;
+}
+.card-icon-dark { display: none; }
+[data-theme="dark"] .card-icon-light { display: none; }
+[data-theme="dark"] .card-icon-dark { display: block; }
 
 /* ---------- Numbered process (How it works — a real sequence) ---------- */
 
