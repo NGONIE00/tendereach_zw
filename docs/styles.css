@@ -292,17 +292,34 @@ section { padding: 56px 0; }
 }
 .dot.active { background: var(--field-green); }
 
-.card { background: var(--card); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 28px; box-shadow: 0 4px 16px var(--shadow); }
+.card {
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: 0 4px 16px var(--shadow);
+}
 .card h3 { font-size: 1.15rem; margin-bottom: 6px; }
 .card .tagline { font-weight: 600; color: var(--ink); font-size: 0.95rem; margin: 0 0 12px; }
 .card p { color: var(--slate); font-size: 0.95rem; margin: 0; }
 .card p.tagline { color: var(--ink); }
 
+.card-body {
+  position: relative;
+  z-index: 1;
+}
+
 .card-icon {
-  width: 64px;
-  height: auto;
-  margin-bottom: 16px;
-  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.16;
+  z-index: 0;
+  pointer-events: none;
 }
 .card-icon-dark { display: none; }
 [data-theme="dark"] .card-icon-light { display: none; }
