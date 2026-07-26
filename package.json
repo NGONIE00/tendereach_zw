@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "node src/server.js",
     "test": "jest",
-    "audit:check": "npm audit --audit-level=high"
+    "audit:check": "npm audit --audit-level=high",
+    "scrape:tenders": "node src/tenders/run.js"
   },
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
     "airtable": "^0.12.2",
     "axios": "^1.18.1",
+    "cheerio": "^1.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
   },
