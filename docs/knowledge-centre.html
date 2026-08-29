@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Procurement Knowledge Centre — Tender Reach</title>
-<meta name="description" content="Plain-language guidance on Zimbabwean public procurement — how the process works, what the law says, and how our tender index stays current.">
+<meta name="description" content="Search open Zimbabwean public tenders and ask procurement questions, powered by a live, continuously refreshed index.">
 <link rel="icon" href="assets/logo.png">
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -30,60 +31,79 @@
 </nav>
 
 <header class="hero container" style="padding-bottom: 16px;">
-  <div class="prose" style="text-align:center; max-width: 700px;">
+  <div class="prose" style="text-align:center; max-width: 680px;">
     <span class="eyebrow">Knowledge Centre</span>
-    <h1>Understanding public procurement, in plain language.</h1>
-    <p class="lede" style="margin:0 auto;">How Zimbabwe's tender system actually works, what the law requires, and how our tender index stays current — without the jargon.</p>
+    <h1>Search tenders. Ask questions. Get answers.</h1>
+    <p class="lede" style="margin:0 auto;">A live index of public tenders from PRAZ's eGP bulletin board, plus an assistant that can answer procurement questions in plain language. Want the full background on how procurement works and what the law requires? <a href="about.html#procurement-knowledge-centre">Read the full explanation on our About page →</a></p>
   </div>
 </header>
 
+
+<!-- ============ TENDER SEARCH + TABLE ============ -->
 <section class="container section-border-top">
-  <div class="prose">
+  <div class="section-head">
+    <span class="eyebrow">Browse</span>
+    <h2>Currently open tenders</h2>
+    <p>Sourced from PRAZ's public eGP bulletin board, refreshed automatically.</p>
+  </div>
 
-    <h2 id="how-procurement-works">How public procurement works, briefly</h2>
-    <p>Public bodies in Zimbabwe — government ministries, parastatals, local authorities — buy goods, works, and services through competitive tenders rather than picking suppliers directly. The Procurement Regulatory Authority of Zimbabwe (PRAZ) oversees this process under the Public Procurement and Disposal of Public Assets Act. Since 2024, most of this has run through PRAZ's electronic Government Procurement (eGP) system, where tenders are published, bids submitted, and awards recorded.</p>
-    <p>In practice, this means: a tender is published with a closing date, suppliers who meet the stated requirements submit a bid before that date, and the procuring entity evaluates and awards based on criteria set out in the tender document itself. The rules are consistent — but the documents describing them often aren't written for someone outside the profession.</p>
+  <div class="tender-search-controls">
+    <input type="text" id="tender-search-input" placeholder="Search by title…" />
+    <select id="tender-category-filter">
+      <option value="">All categories</option>
+      <option value="Construction">Construction</option>
+      <option value="ICT">ICT</option>
+      <option value="Medical">Medical</option>
+      <option value="Security">Security</option>
+      <option value="Engineering">Engineering</option>
+      <option value="Agriculture">Agriculture</option>
+      <option value="Office Supplies">Office Supplies</option>
+      <option value="Logistics">Logistics</option>
+    </select>
+    <button id="tender-search-btn" class="btn btn-outline">Search</button>
+  </div>
 
-    <h2 id="document-guidance">Making sense of a tender document</h2>
-    <p>Most tender notices follow a similar shape, even when the wording is dense:</p>
-    <ul>
-      <li><strong>Reference number and category</strong> — identifies the tender and what kind of supplier it's open to.</li>
-      <li><strong>Scope of requirement</strong> — what's actually being procured, in the procuring entity's own terms.</li>
-      <li><strong>Eligibility and compliance requirements</strong> — registration status, tax clearance, and any category-specific conditions.</li>
-      <li><strong>Submission requirements</strong> — the specific documents and format expected, and the closing date and time.</li>
-      <li><strong>Evaluation criteria</strong> — how bids will be scored, which tells you what to emphasize in your submission.</li>
-    </ul>
-    <p>This is exactly what our WhatsApp assistant is built to unpack for a specific tender you share with us — turning that structure into a plain checklist rather than a wall of text.</p>
+  <p class="tender-search-status" id="tender-search-status"></p>
 
-    <h2 id="tender-index">How our tender index stays current</h2>
-    <p>Alongside the Founding Supplier Programme, we maintain a live, continuously refreshed index of public tenders from across Zimbabwe — sourced directly from PRAZ's public eGP bulletin board, the same information any visitor can already view openly on their site, just organized in one place and kept current automatically.</p>
-    <p>This index is what powers the assistant's ability to answer questions like "what tenders are open in my industry right now" or "when does this one close" — grounded in real, current listings rather than guesswork.</p>
-
-    <h3>What this is</h3>
-    <ul>
-      <li>A regularly refreshed index of tender ID, reference number, title, category, procuring entity, and publish/closing dates — all fields already publicly visible on PRAZ's bulletin board.</li>
-      <li>Used to power search, alerts, and assistant-guided answers inside Tender Reach.</li>
-    </ul>
-
-    <h3>What this isn't</h3>
-    <ul>
-      <li>We don't access any authenticated area of PRAZ's system, download bid documents, or touch anything behind a supplier login.</li>
-      <li>We don't resell this index or offer it as a standalone data product — it exists only to make Tender Reach's own guidance current.</li>
-      <li>We fetch politely: rate-limited, clearly identified, and not in a way designed to burden PRAZ's infrastructure.</li>
-    </ul>
-
-    <h2 id="get-a-checklist">Get a checklist for a specific tender</h2>
-    <p>Rather than generic downloadable templates — which rarely match what a specific tender actually asks for — Tender Reach generates a document checklist tailored to the tender notice you share with us on WhatsApp. Forward or paste the notice, and you'll get back the plain-language summary and checklist for that exact opportunity.</p>
-    <p><a href="contact.html" class="btn">Ask about a tender on WhatsApp →</a></p>
-
+  <div class="tender-table-wrap">
+    <table class="tender-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Category</th>
+          <th>Procuring Entity</th>
+          <th>Closing</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody id="tender-results-body">
+        <!-- populated by knowledge-centre.js -->
+      </tbody>
+    </table>
   </div>
 </section>
 
+<!-- ============ AI Q&A WIDGET ============ -->
+<section class="container section-border-top">
+  <div class="section-head">
+    <h2>Ask a procurement question</h2>
+    <p>Get a plain-language answer, grounded in currently open tenders where relevant.</p>
+  </div>
+  <div class="ai-widget" style="max-width: 640px; margin: 0 auto;">
+    <div class="ai-widget-input-row">
+      <input type="text" id="ai-question-input" placeholder="e.g. What documents do I need to register as a supplier?" />
+      <button id="ai-ask-btn" class="btn">Ask</button>
+    </div>
+    <div id="ai-response" class="ai-widget-response"></div>
+  </div>
+</section>
+
+
 <section class="container section-border-top">
   <div class="cta-band">
-    <h2>Want this shaped by your experience?</h2>
-    <p>The Founding Supplier Programme exists to make sure this guidance reflects what suppliers actually struggle with — not assumptions.</p>
-    <a href="about.html#founding-supplier-programme" class="btn" style="background:#FFFFFF; color:var(--ledger-navy);">Learn about the programme</a>
+    <h2>Prefer WhatsApp?</h2>
+    <p>Forward or paste a tender notice directly to our assistant for a tailored plain-language checklist.</p>
+    <a href="contact.html" class="btn" style="background:#FFFFFF; color:var(--ledger-navy);">Ask on WhatsApp →</a>
   </div>
 </section>
 
@@ -131,5 +151,6 @@
 </footer>
 
 <script src="script.js"></script>
+<script src="knowledge-centre.js"></script>
 </body>
 </html>
