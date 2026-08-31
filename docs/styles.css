@@ -73,7 +73,8 @@ a { color: var(--field-green); }
 .container {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 0 24px;
+  padding-left:  24px;
+  padding-right: 24px;
 }
 
 /* ---------- Nav ---------- */
