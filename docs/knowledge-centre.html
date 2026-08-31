@@ -40,6 +40,7 @@
 
 
 <!-- ============ TENDER SEARCH + TABLE ============ -->
+
 <section class="container section-border-top">
   <div class="section-head">
     <span class="eyebrow">Browse</span>
@@ -48,11 +49,12 @@
   </div>
 
   <div class="tender-search-controls">
-    <input type="text" id="tender-search-input" placeholder="Search by title…" />
-  <select id="tender-category-filter">
+    <input type="text" id="tender-search-input" placeholder="Search by title, entity, or reference #…" />
+    <select id="tender-category-filter">
       <option value="">All categories</option>
-  </select>
+    </select>
     <button id="tender-search-btn" class="btn btn-outline">Search</button>
+    <button id="tender-sort-closing" class="btn-outline" type="button">Closing ↑</button>
   </div>
 
   <p class="tender-search-status" id="tender-search-status"></p>
@@ -61,6 +63,7 @@
     <table class="tender-table">
       <thead>
         <tr>
+          <th>Reference #</th>
           <th>Title</th>
           <th>Category</th>
           <th>Procuring Entity</th>
@@ -73,6 +76,8 @@
       </tbody>
     </table>
   </div>
+
+  <div class="tender-pagination" id="tender-pagination"></div>
 </section>
 
 <!-- ============ AI Q&A WIDGET ============ -->

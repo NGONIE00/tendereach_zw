@@ -1,27 +1,23 @@
 /**
- * Knowledge Centre page logic — two independent features:
- *  1. Tender search/filter/table, reading directly from Supabase
- *     (public anon key, safe — see supabase/migrations/003_public_tenders_read.sql)
+ * Knowledge Centre page logic:
+ *  1. Tender search/filter/table with pagination, reading directly from
+ *     Supabase (public anon key, safe — see
+ *     supabase/migrations/003_public_tenders_read.sql)
  *  2. AI Q&A widget, calling the /api/ask serverless function
  *     (keeps the Gemini key server-side — see docs/api/ask.js)
  *
- * Requires the Supabase JS client to be loaded on the page first:
+ * Requires the Supabase JS client loaded first:
  *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
- * and these two constants filled in below with your real project values.
- *
- * NOTE on categories: PRAZ's real "Required Supplier Category Name"
- * values are long descriptive phrases (e.g. "Electrical Products:
- * Cables and Materials, Power Back-Up Equipment, Transformers..."),
- * not simple single words — a tender can also list several codes/names
- * comma-separated in one field. A fixed dropdown of generic labels
- * ("Construction", "ICT", etc.) would silently never match real data.
- * Instead, the category filter below is populated dynamically from the
- * distinct category CODES actually present in your scraped data —
- * codes are short and stable (e.g. "GE001"), unlike the long names.
+ * and SUPABASE_URL / SUPABASE_ANON_KEY filled in below.
  */
 
 const SUPABASE_URL ="https://njbvwidesxizthxjzkku.supabase.co"; 
 const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qYnZ3aWRlc3hpenRoeGp6a2t1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTMyNzksImV4cCI6MjA5OTE2OTI3OX0.4PGc2rSbJlXoth9shHWCpP86tohR-4F6RRe7PHYVz74"; 
+
+
+const PAGE_SIZE = 15;
+const SEARCH_DEBOUNCE_MS = 400;
+const MIN_SEARCH_LENGTH = 2; // avoid firing a broad query on every single keystroke
 
 let supabaseClient = null;
 function getSupabaseClient() {
@@ -29,6 +25,29 @@ function getSupabaseClient() {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
   return supabaseClient;
+}
+
+let currentPage = 1;
+let totalPages = 1;
+let sortAscending = true; // closing date sort direction
+let searchDebounceTimer = null;
+
+/**
+ * Escapes a user-typed search term for safe use inside a PostgREST
+ * `.or()` filter string and `.ilike()` pattern:
+ *  - Escapes literal "%" and "_" so a user typing them doesn't act as
+ *    an unintended SQL wildcard.
+ *  - Strips characters that are syntactically meaningful to PostgREST's
+ *    filter-string grammar itself (commas, parentheses) rather than
+ *    trying to escape them, since PostgREST has no escape sequence for
+ *    them inside an .or() string — stripping is the safe choice here.
+ */
+function sanitizeSearchTerm(raw) {
+  return raw
+    .replace(/[,()]/g, "")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
+    .trim();
 }
 
 /* ---------- Category filter: populated from real data ---------- */
@@ -50,8 +69,7 @@ async function loadCategoryOptions() {
       return;
     }
 
-    const seen = new Map(); // code -> a representative short label
-
+    const seen = new Map();
     data.forEach((row) => {
       const codes = (row.category_codes || "").split(",").map((c) => c.trim()).filter(Boolean);
       const names = (row.category_names || "").split(",").map((n) => n.trim()).filter(Boolean);
@@ -64,27 +82,32 @@ async function loadCategoryOptions() {
       });
     });
 
-    const sortedCodes = Array.from(seen.keys()).sort();
-    sortedCodes.forEach((code) => {
-      const opt = document.createElement("option");
-      opt.value = code;
-      opt.textContent = `${code} — ${seen.get(code)}`;
-      select.appendChild(opt);
-    });
+    Array.from(seen.keys())
+      .sort()
+      .forEach((code) => {
+        const opt = document.createElement("option");
+        opt.value = code;
+        opt.textContent = `${code} — ${seen.get(code)}`;
+        select.appendChild(opt);
+      });
   } catch (err) {
     console.error("[knowledge-centre] Unexpected error loading categories:", err.message);
   }
 }
 
-/* ---------- Tender search / filter / table ---------- */
+/* ---------- Tender search / filter / sort / paginate ---------- */
 
-async function loadTenders() {
+async function loadTenders(resetToFirstPage = true) {
   const client = getSupabaseClient();
   const resultsBody = document.getElementById("tender-results-body");
   const statusEl = document.getElementById("tender-search-status");
+  const paginationEl = document.getElementById("tender-pagination");
   if (!client || !resultsBody) return;
 
-  const searchTerm = document.getElementById("tender-search-input").value.trim();
+  if (resetToFirstPage) currentPage = 1;
+
+  const rawSearchTerm = document.getElementById("tender-search-input").value.trim();
+  const searchTerm = sanitizeSearchTerm(rawSearchTerm);
   const categoryCode = document.getElementById("tender-category-filter").value;
 
   statusEl.textContent = "Searching…";
@@ -93,37 +116,50 @@ async function loadTenders() {
   try {
     let query = client
       .from("tenders")
-      .select("title, reference_number, category_names, procuring_entity, closing_date, source_url, category_codes")
-      .order("closing_date", { ascending: true })
-      .limit(30);
+      .select(
+        "reference_number, title, category_names, procuring_entity, closing_date, source_url, category_codes",
+        { count: "exact" }
+      )
+      .order("closing_date", { ascending: sortAscending });
 
-    if (searchTerm) {
-      query = query.ilike("title", `%${searchTerm}%`);
+    if (searchTerm.length >= MIN_SEARCH_LENGTH) {
+      query = query.or(
+        `title.ilike.%${searchTerm}%,procuring_entity.ilike.%${searchTerm}%,reference_number.ilike.%${searchTerm}%`
+      );
     }
     if (categoryCode) {
       query = query.ilike("category_codes", `%${categoryCode}%`);
     }
 
-    const { data, error } = await query;
+    const from = (currentPage - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
 
     if (error) {
       statusEl.textContent = "Couldn't load tenders right now — please try again shortly.";
       console.error("[knowledge-centre] Supabase query error:", error.message);
+      paginationEl.innerHTML = "";
       return;
     }
 
     if (!data || data.length === 0) {
       statusEl.textContent = "No matching tenders found.";
+      paginationEl.innerHTML = "";
       return;
     }
 
-    statusEl.textContent = `${data.length} tender${data.length === 1 ? "" : "s"} found.`;
+    totalPages = Math.max(1, Math.ceil((count || data.length) / PAGE_SIZE));
+    statusEl.textContent = `${count} tender${count === 1 ? "" : "s"} found — page ${currentPage} of ${totalPages}.`;
+
     data.forEach((t) => {
       const row = document.createElement("tr");
       const closing = t.closing_date ? new Date(t.closing_date).toLocaleDateString() : "—";
       const categoryDisplay = (t.category_names || "—").split(",")[0].trim();
       row.innerHTML = `
-        <td>${escapeHtml(t.title || "Untitled")}</td>
+        <td>${escapeHtml(t.reference_number || "—")}</td>
+        <td class="tender-title-cell" title="${escapeHtml(t.title || "")}">${escapeHtml(t.title || "Untitled")}</td>
         <td>${escapeHtml(categoryDisplay)}</td>
         <td>${escapeHtml(t.procuring_entity || "—")}</td>
         <td>${closing}</td>
@@ -131,10 +167,42 @@ async function loadTenders() {
       `;
       resultsBody.appendChild(row);
     });
+
+    renderPagination(paginationEl);
   } catch (err) {
     statusEl.textContent = "Something went wrong loading tenders.";
     console.error("[knowledge-centre] Unexpected error:", err.message);
   }
+}
+
+function renderPagination(container) {
+  container.innerHTML = "";
+
+  const prevBtn = document.createElement("button");
+  prevBtn.textContent = "← Prev";
+  prevBtn.className = "btn-outline";
+  prevBtn.disabled = currentPage <= 1;
+  prevBtn.addEventListener("click", () => {
+    currentPage -= 1;
+    loadTenders(false);
+  });
+
+  const nextBtn = document.createElement("button");
+  nextBtn.textContent = "Next →";
+  nextBtn.className = "btn-outline";
+  nextBtn.disabled = currentPage >= totalPages;
+  nextBtn.addEventListener("click", () => {
+    currentPage += 1;
+    loadTenders(false);
+  });
+
+  const pageLabel = document.createElement("span");
+  pageLabel.className = "pagination-label";
+  pageLabel.textContent = `Page ${currentPage} of ${totalPages}`;
+
+  container.appendChild(prevBtn);
+  container.appendChild(pageLabel);
+  container.appendChild(nextBtn);
 }
 
 function escapeHtml(str) {
@@ -185,13 +253,38 @@ async function askQuestion() {
 
 document.addEventListener("DOMContentLoaded", function () {
   const searchBtn = document.getElementById("tender-search-btn");
+  const searchInput = document.getElementById("tender-search-input");
+  const categorySelect = document.getElementById("tender-category-filter");
+  const sortBtn = document.getElementById("tender-sort-closing");
+
   if (searchBtn) {
-    searchBtn.addEventListener("click", loadTenders);
-    document.getElementById("tender-search-input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") loadTenders();
+    searchBtn.addEventListener("click", () => loadTenders(true));
+
+    // Ease-of-search: live search-as-you-type, debounced so it doesn't
+    // fire a query on every keystroke.
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => loadTenders(true), SEARCH_DEBOUNCE_MS);
     });
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        clearTimeout(searchDebounceTimer);
+        loadTenders(true);
+      }
+    });
+
+    categorySelect.addEventListener("change", () => loadTenders(true));
+
+    if (sortBtn) {
+      sortBtn.addEventListener("click", () => {
+        sortAscending = !sortAscending;
+        sortBtn.textContent = sortAscending ? "Closing ↑" : "Closing ↓";
+        loadTenders(false);
+      });
+    }
+
     loadCategoryOptions();
-    loadTenders();
+    loadTenders(true);
   }
 
   const askBtn = document.getElementById("ai-ask-btn");

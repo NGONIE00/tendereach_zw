@@ -625,3 +625,41 @@ table.tender-table tr:last-child td { border-bottom: none; }
   font-size: 0.85rem;
   color: var(--slate);
 }
+
+/* Truncates long tender titles with an ellipsis; full text still
+   available via the title="" attribute (hover tooltip) set in JS */
+.tender-title-cell {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pagination row below the tender table */
+.tender-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+.tender-pagination button {
+  padding: 8px 16px;
+  font-size: 0.88rem;
+}
+.tender-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.tender-pagination .pagination-label {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--slate);
+}
+
+/* Sort button sits next to Search in the same control row */
+#tender-sort-closing {
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
