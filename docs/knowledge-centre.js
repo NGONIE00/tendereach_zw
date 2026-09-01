@@ -1,10 +1,10 @@
 /**
  * Knowledge Centre page logic:
- *  1. Tender search/filter/table with pagination, reading directly from
- *     Supabase (public anon key, safe — see
- *     supabase/migrations/003_public_tenders_read.sql)
+ *  1. Tender search/filter/table with pagination, reading from Supabase
+ *     (public anon key, safe — see supabase/migrations/003_public_tenders_read.sql)
  *  2. AI Q&A widget, calling the /api/ask serverless function
  *     (keeps the Gemini key server-side — see docs/api/ask.js)
+ *  3. Client-side caching — see the Cache section below.
  *
  * Requires the Supabase JS client loaded first:
  *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -17,7 +17,7 @@ const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 const PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 400;
-const MIN_SEARCH_LENGTH = 2; // avoid firing a broad query on every single keystroke
+const MIN_SEARCH_LENGTH = 2;
 
 let supabaseClient = null;
 function getSupabaseClient() {
@@ -29,33 +29,93 @@ function getSupabaseClient() {
 
 let currentPage = 1;
 let totalPages = 1;
-let sortAscending = true; // closing date sort direction
+let sortAscending = true;
 let searchDebounceTimer = null;
 
-/**
- * Escapes a user-typed search term for safe use inside a PostgREST
- * `.or()` filter string and `.ilike()` pattern:
- *  - Escapes literal "%" and "_" so a user typing them doesn't act as
- *    an unintended SQL wildcard.
- *  - Strips characters that are syntactically meaningful to PostgREST's
- *    filter-string grammar itself (commas, parentheses) rather than
- *    trying to escape them, since PostgREST has no escape sequence for
- *    them inside an .or() string — stripping is the safe choice here.
- */
-function sanitizeSearchTerm(raw) {
-  return raw
-    .replace(/[,()]/g, "")
-    .replace(/%/g, "\\%")
-    .replace(/_/g, "\\_")
-    .trim();
+/* ============================================================
+   CLIENT-SIDE CACHE
+   ============================================================
+   Two caches, different lifetimes:
+
+   - Category list rarely changes (new categories only appear when
+     PRAZ introduces a new supplier category) -> localStorage,
+     30-minute TTL, persists across visits so returning users don't
+     re-fetch it every time.
+
+   - Search results change whenever the scraper runs (every 6-12
+     hours per docs/PROCUREMENT_KNOWLEDGE_CENTRE.md) and there are
+     many possible search/filter/page combinations -> sessionStorage
+     (cleared when the tab closes, so it never grows unbounded across
+     visits), 3-minute TTL — long enough to make paging back-and-forth
+     or repeated searches instant, short enough that a scraper refresh
+     is reflected within one browsing session.
+
+   Both only ever cache public tender data (never anything from the
+   AI widget or anything personal) and both fail silently if storage
+   is unavailable (private browsing, quota exceeded, disabled) —
+   caching is a performance optimization, not a requirement, so a
+   failure here should never break the page.
+   ============================================================ */
+
+const CACHE_PREFIX = "tr_cache_";
+const CATEGORY_CACHE_KEY = CACHE_PREFIX + "categories";
+const CATEGORY_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const SEARCH_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+
+function readCache(storage, key, ttlMs) {
+  try {
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+    const { value, cachedAt } = JSON.parse(raw);
+    if (Date.now() - cachedAt > ttlMs) {
+      storage.removeItem(key);
+      return null;
+    }
+    return value;
+  } catch (err) {
+    return null; // corrupted entry or storage unavailable — just miss the cache
+  }
 }
 
-/* ---------- Category filter: populated from real data ---------- */
+function writeCache(storage, key, value) {
+  try {
+    storage.setItem(key, JSON.stringify({ value, cachedAt: Date.now() }));
+  } catch (err) {
+    // Storage full or unavailable — caching is best-effort, not required.
+    console.warn("[knowledge-centre] Cache write skipped:", err.message);
+  }
+}
+
+function searchCacheKey(searchTerm, categoryCode, page, ascending) {
+  return `${CACHE_PREFIX}search_${searchTerm}|${categoryCode}|${page}|${ascending}`;
+}
+
+/** Clears all of this page's cached entries — called after the AI
+ *  widget isn't relevant here, but exposed in case a manual "refresh
+ *  data" action is added later. */
+function clearTenderCaches() {
+  try {
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith(CACHE_PREFIX))
+      .forEach((k) => sessionStorage.removeItem(k));
+    localStorage.removeItem(CATEGORY_CACHE_KEY);
+  } catch (err) {
+    /* no-op */
+  }
+}
+
+/* ---------- Category filter: populated from real data, cached ---------- */
 
 async function loadCategoryOptions() {
   const client = getSupabaseClient();
   const select = document.getElementById("tender-category-filter");
   if (!client || !select) return;
+
+  const cached = readCache(localStorage, CATEGORY_CACHE_KEY, CATEGORY_CACHE_TTL_MS);
+  if (cached) {
+    populateCategorySelect(select, cached);
+    return;
+  }
 
   try {
     const { data, error } = await client
@@ -82,20 +142,27 @@ async function loadCategoryOptions() {
       });
     });
 
-    Array.from(seen.keys())
-      .sort()
-      .forEach((code) => {
-        const opt = document.createElement("option");
-        opt.value = code;
-        opt.textContent = `${code} — ${seen.get(code)}`;
-        select.appendChild(opt);
-      });
+    const options = Array.from(seen.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([code, label]) => ({ code, label }));
+
+    writeCache(localStorage, CATEGORY_CACHE_KEY, options);
+    populateCategorySelect(select, options);
   } catch (err) {
     console.error("[knowledge-centre] Unexpected error loading categories:", err.message);
   }
 }
 
-/* ---------- Tender search / filter / sort / paginate ---------- */
+function populateCategorySelect(select, options) {
+  options.forEach(({ code, label }) => {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = `${code} — ${label}`;
+    select.appendChild(opt);
+  });
+}
+
+/* ---------- Tender search / filter / sort / paginate, cached per query ---------- */
 
 async function loadTenders(resetToFirstPage = true) {
   const client = getSupabaseClient();
@@ -112,6 +179,15 @@ async function loadTenders(resetToFirstPage = true) {
 
   statusEl.textContent = "Searching…";
   resultsBody.innerHTML = "";
+
+  const cacheKey = searchCacheKey(searchTerm, categoryCode, currentPage, sortAscending);
+  const cached = readCache(sessionStorage, cacheKey, SEARCH_CACHE_TTL_MS);
+  if (cached) {
+    totalPages = cached.totalPages;
+    renderResults(cached.rows, cached.count, resultsBody, statusEl);
+    renderPagination(paginationEl);
+    return;
+  }
 
   try {
     let query = client
@@ -151,28 +227,42 @@ async function loadTenders(resetToFirstPage = true) {
     }
 
     totalPages = Math.max(1, Math.ceil((count || data.length) / PAGE_SIZE));
-    statusEl.textContent = `${count} tender${count === 1 ? "" : "s"} found — page ${currentPage} of ${totalPages}.`;
 
-    data.forEach((t) => {
-      const row = document.createElement("tr");
-      const closing = t.closing_date ? new Date(t.closing_date).toLocaleDateString() : "—";
-      const categoryDisplay = (t.category_names || "—").split(",")[0].trim();
-      row.innerHTML = `
-        <td>${escapeHtml(t.reference_number || "—")}</td>
-        <td class="tender-title-cell" title="${escapeHtml(t.title || "")}">${escapeHtml(t.title || "Untitled")}</td>
-        <td>${escapeHtml(categoryDisplay)}</td>
-        <td>${escapeHtml(t.procuring_entity || "—")}</td>
-        <td>${closing}</td>
-        <td>${t.source_url ? `<a href="${escapeHtml(t.source_url)}" target="_blank" rel="noopener">View →</a>` : "—"}</td>
-      `;
-      resultsBody.appendChild(row);
-    });
+    writeCache(sessionStorage, cacheKey, { rows: data, count, totalPages });
 
+    renderResults(data, count, resultsBody, statusEl);
     renderPagination(paginationEl);
   } catch (err) {
     statusEl.textContent = "Something went wrong loading tenders.";
     console.error("[knowledge-centre] Unexpected error:", err.message);
   }
+}
+
+function renderResults(rows, count, resultsBody, statusEl) {
+  statusEl.textContent = `${count} tender${count === 1 ? "" : "s"} found — page ${currentPage} of ${totalPages}.`;
+  resultsBody.innerHTML = "";
+  rows.forEach((t) => {
+    const row = document.createElement("tr");
+    const closing = t.closing_date ? new Date(t.closing_date).toLocaleDateString() : "—";
+    const categoryDisplay = (t.category_names || "—").split(",")[0].trim();
+    row.innerHTML = `
+      <td>${escapeHtml(t.reference_number || "—")}</td>
+      <td class="tender-title-cell" title="${escapeHtml(t.title || "")}">${escapeHtml(t.title || "Untitled")}</td>
+      <td>${escapeHtml(categoryDisplay)}</td>
+      <td>${escapeHtml(t.procuring_entity || "—")}</td>
+      <td>${closing}</td>
+      <td>${t.source_url ? `<a href="${escapeHtml(t.source_url)}" target="_blank" rel="noopener">View →</a>` : "—"}</td>
+    `;
+    resultsBody.appendChild(row);
+  });
+}
+
+function sanitizeSearchTerm(raw) {
+  return raw
+    .replace(/[,()]/g, "")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
+    .trim();
 }
 
 function renderPagination(container) {
@@ -211,7 +301,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-/* ---------- AI Q&A widget ---------- */
+/* ---------- AI Q&A widget (not cached — every question is distinct) ---------- */
 
 async function askQuestion() {
   const input = document.getElementById("ai-question-input");
@@ -260,8 +350,6 @@ document.addEventListener("DOMContentLoaded", function () {
   if (searchBtn) {
     searchBtn.addEventListener("click", () => loadTenders(true));
 
-    // Ease-of-search: live search-as-you-type, debounced so it doesn't
-    // fire a query on every keystroke.
     searchInput.addEventListener("input", () => {
       clearTimeout(searchDebounceTimer);
       searchDebounceTimer = setTimeout(() => loadTenders(true), SEARCH_DEBOUNCE_MS);
