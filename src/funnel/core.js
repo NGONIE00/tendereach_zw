@@ -3,26 +3,18 @@ const messages = require("./messages");
 const { checkRateLimit } = require("./rateLimiter");
 const sessionStore = require("../db/sessionStore");
 const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("../db/airtable");
+const { answerProcurementQuestion } = require("../ai/answerProcurementQuestion");
 
 /**
  * Channel-agnostic core of the funnel. Every channel webhook (WhatsApp,
- * Messenger, Instagram, and any future one) calls this same function —
- * only the inbound payload parsing and the outbound `sendFn` differ per
- * channel. This is what keeps docs/WHATSAPP_FUNNEL.md's logic identical
- * across platforms instead of forking into three copies that drift apart.
+ * Messenger, Instagram) calls this same function.
  *
- * Session keys are namespaced per channel (`whatsapp:<id>`,
- * `messenger:<id>`, `instagram:<id>`) so the same person messaging on two
- * different platforms is treated as two separate conversations for now —
- * see docs/MULTI_CHANNEL_ARCHITECTURE.md for why that's a deliberate
- * simplification, not an oversight.
- *
- * @param {string} channel - 'whatsapp' | 'messenger' | 'instagram'
- * @param {string} externalId - the platform's own user identifier
- *   (WhatsApp phone number, Messenger PSID, Instagram-scoped ID)
- * @param {string} text - the incoming message text
- * @param {(externalId: string, body: string) => Promise<void>} sendFn -
- *   channel-specific function that actually sends the reply
+ * Checks sessionUpdates.__needsAiAnswer (set by router.js's routePath2
+ * for Path 2 questions) and calls answerProcurementQuestion() here —
+ * this is the async, real-I/O layer, same as the existing Airtable
+ * persistence, so router.js stays pure. On any AI failure (or if
+ * GEMINI_API_KEY isn't set), falls back to the original placeholder +
+ * closing prompt rather than a broken reply.
  */
 async function processIncomingMessage(channel, externalId, text, sendFn) {
   const sessionKey = `${channel}:${externalId}`;
@@ -48,20 +40,48 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
     } catch (err) {
       console.error("Failed to delete Airtable record on user request:", err.message);
     }
-  } else {
-    const { __interviewCompleted, ...cleanUpdates } = sessionUpdates;
-    const updatedSession = await sessionStore.setSession(sessionKey, cleanUpdates);
+    await sendFn(externalId, reply);
+    return;
+  }
 
-    if (__interviewCompleted) {
-      try {
-        await createFoundingSupplierRecord(updatedSession, channel, externalId);
-        console.log(`Founding Supplier record created in Airtable (${channel}).`);
-      } catch (err) {
-        console.error(
-          "Failed to persist completed interview to Airtable — needs manual follow-up:",
-          err.message
-        );
+  if (sessionUpdates.__needsAiAnswer) {
+    const { __needsAiAnswer, __aiQuestion, ...cleanUpdates } = sessionUpdates;
+    const question = __aiQuestion;
+
+    let finalReply;
+    try {
+      const aiAnswer = await answerProcurementQuestion(question);
+      if (aiAnswer) {
+        finalReply = aiAnswer + "\n\n" + messages.path2.closingPrompt;
+      } else {
+        // AI unavailable (no key, or call failed) — honest fallback,
+        // not a broken/silent reply.
+        finalReply = messages.path2.placeholder + "\n\n" + messages.path2.closingPrompt;
       }
+      cleanUpdates.awaitingClosingReply = true;
+    } catch (err) {
+      console.error("Unexpected error answering procurement question:", err.message);
+      finalReply = messages.path2.placeholder + "\n\n" + messages.path2.closingPrompt;
+      cleanUpdates.awaitingClosingReply = true;
+    }
+
+    await sessionStore.setSession(sessionKey, cleanUpdates);
+    await sendFn(externalId, finalReply);
+    return;
+  }
+
+  const { __interviewCompleted, ...cleanUpdates } = sessionUpdates;
+  const updatedSession = await sessionStore.setSession(sessionKey, cleanUpdates);
+
+  if (__interviewCompleted) {
+    try {
+      await createFoundingSupplierRecord(updatedSession, channel, externalId);
+      console.log(`Founding Supplier record created in Airtable (${channel}).`);
+    } catch (err) {
+      console.error(
+        "Failed to persist completed interview to Airtable — needs manual follow-up:",
+        err.message
+      );
     }
   }
 

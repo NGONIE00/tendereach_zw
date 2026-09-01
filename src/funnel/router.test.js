@@ -8,6 +8,7 @@ function freshSession(overrides = {}) {
     interviewStep: 0,
     interviewAnswers: [],
     internalTag: "Cold Lead",
+    awaitingClosingReply: false,
     ...overrides,
   };
 }
@@ -66,11 +67,10 @@ describe("Founding Supplier interview flow (Path 1)", () => {
 
     for (let i = 1; i <= 6; i++) {
       const { reply, sessionUpdates } = route(session, `answer to Q${i}`);
-      expect(reply).toBe(messages.path1.questions[i]); // next question
+      expect(reply).toBe(messages.path1.questions[i]);
       session = { ...session, ...sessionUpdates };
     }
 
-    // Answer Q7 (final question) — should complete the interview.
     const final = route(session, "answer to Q7");
     expect(final.reply).toBe(messages.path1.complete);
     expect(final.sessionUpdates.currentPath).toBeNull();
@@ -94,26 +94,51 @@ describe("Founding Supplier interview flow (Path 1)", () => {
 });
 
 describe("Path 2 (Ask a procurement question)", () => {
-  test("first message after entering path2 gets the placeholder + closing prompt", () => {
+  test("a question asked right after entering path2 signals __needsAiAnswer instead of replying directly", () => {
     const session = freshSession({ currentPath: "path2" });
-    const { reply } = route(session, "How do I register as a supplier?");
-    expect(reply).toContain(messages.path2.placeholder);
-    expect(reply).toContain(messages.path2.closingPrompt);
+    const { reply, sessionUpdates } = route(session, "How do I register as a supplier?");
+
+    expect(reply).toBeNull();
+    expect(sessionUpdates.__needsAiAnswer).toBe(true);
+    expect(sessionUpdates.__aiQuestion).toBe("How do I register as a supplier?");
+    expect(sessionUpdates.internalTag).toBe("Active User");
   });
 
-  test('replying "1" to the closing prompt routes into the Founding Supplier interview', () => {
-    const session = freshSession({ currentPath: "path2" });
+  test("a second question also signals __needsAiAnswer as long as awaitingClosingReply isn't set", () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
+    const { reply, sessionUpdates } = route(session, "What documents do I need?");
+
+    expect(reply).toBeNull();
+    expect(sessionUpdates.__needsAiAnswer).toBe(true);
+    expect(sessionUpdates.__aiQuestion).toBe("What documents do I need?");
+  });
+
+  test('once awaitingClosingReply is true, replying "1" routes into the Founding Supplier interview', () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
     const { reply, sessionUpdates } = route(session, "1");
+
     expect(reply).toContain(messages.path1.questions[0]);
     expect(sessionUpdates.currentPath).toBe("path1");
     expect(sessionUpdates.internalTag).toBe("Warm Lead");
+    expect(sessionUpdates.awaitingClosingReply).toBe(false);
   });
 
-  test('replying "2" to the closing prompt returns to the main menu', () => {
-    const session = freshSession({ currentPath: "path2" });
+  test('once awaitingClosingReply is true, replying "2" returns to the main menu', () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
     const { reply, sessionUpdates } = route(session, "2");
+
     expect(reply).toBe(messages.welcome);
     expect(sessionUpdates.currentPath).toBeNull();
+    expect(sessionUpdates.awaitingClosingReply).toBe(false);
+  });
+
+  test('if awaitingClosingReply is true but the user types something other than "1"/"2", it is treated as a new question', () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
+    const { reply, sessionUpdates } = route(session, "Actually, when is the closing date for X?");
+
+    expect(reply).toBeNull();
+    expect(sessionUpdates.__needsAiAnswer).toBe(true);
+    expect(sessionUpdates.__aiQuestion).toBe("Actually, when is the closing date for X?");
   });
 });
 
