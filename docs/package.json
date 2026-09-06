@@ -1,0 +1,10 @@
+{
+  "name": "tendereach-website",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "axios": "^1.18.1",
+    "airtable": "^0.12.2"
+  }
+}
