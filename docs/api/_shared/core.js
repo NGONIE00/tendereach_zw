@@ -1,20 +1,22 @@
 const { route } = require("./router");
 const messages = require("./messages");
 const { checkRateLimit } = require("./rateLimiter");
-const sessionStore = require("../db/sessionStore");
-const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("../db/airtable");
-const { answerProcurementQuestion } = require("../ai/answerProcurementQuestion");
+const sessionStore = require("./sessionStore");
+const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("./airtable");
+const { answerProcurementQuestion } = require("./answerProcurementQuestion");
 
 /**
  * Channel-agnostic core of the funnel. Every channel webhook (WhatsApp,
  * Messenger, Instagram) calls this same function.
  *
- * Checks sessionUpdates.__needsAiAnswer (set by router.js's routePath2
- * for Path 2 questions) and calls answerProcurementQuestion() here —
- * this is the async, real-I/O layer, same as the existing Airtable
- * persistence, so router.js stays pure. On any AI failure (or if
- * GEMINI_API_KEY isn't set), falls back to the original placeholder +
- * closing prompt rather than a broken reply.
+ * NOTE: this copy lives in docs/api/_shared/ for the Vercel serverless
+ * deployment — all its dependencies (router.js, messages.js,
+ * rateLimiter.js, sessionStore.js, airtable.js,
+ * answerProcurementQuestion.js) are flat siblings in the same _shared
+ * folder here, unlike the original src/funnel/core.js where they lived
+ * in separate db/ and ai/ subfolders. If you edit this file, use
+ * "./whatever" paths, not "../db/whatever" or "../ai/whatever" — that
+ * mismatch is exactly what caused the FUNCTION_INVOCATION_FAILED crash.
  */
 async function processIncomingMessage(channel, externalId, text, sendFn) {
   const sessionKey = `${channel}:${externalId}`;
@@ -54,8 +56,6 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
       if (aiAnswer) {
         finalReply = aiAnswer + "\n\n" + messages.path2.closingPrompt;
       } else {
-        // AI unavailable (no key, or call failed) — honest fallback,
-        // not a broken/silent reply.
         finalReply = messages.path2.placeholder + "\n\n" + messages.path2.closingPrompt;
       }
       cleanUpdates.awaitingClosingReply = true;
