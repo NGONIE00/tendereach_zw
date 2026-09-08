@@ -1,22 +1,22 @@
 /**
  * Core Gemini client — shared by the WhatsApp funnel's Path 2 (see
- * src/ai/answerProcurementQuestion.js) and mirrored by the website's
- * docs/api/ask.js serverless function. If you change the system
- * instruction here, update docs/api/ask.js to match — the two run in
- * separate deployments (Node backend vs. Vercel function) so the logic
- * can't be imported directly across them, but the behavior should stay
- * consistent.
+ * src/ai/answerProcurementQuestion.js, and its copy in
+ * docs/api/_shared/ for the serverless deployment) and mirrored by
+ * docs/api/ask.js.
+ *
+ * MODEL NAME: gemini-1.5-flash was discontinued by Google — confirmed
+ * via a live query against https://generativelanguage.googleapis.com/v1beta/models
+ * using your own API key. If this model is ever retired too, re-run
+ * that same URL (with your key appended as ?key=YOUR_KEY) to see
+ * exactly what's currently available, rather than guessing — Google
+ * has changed model names/availability multiple times.
  *
  * TOPIC GUARDRAIL: enforced via a strong, explicit system instruction,
- * not a keyword filter. A keyword-based pre-filter was considered and
- * deliberately rejected — it's brittle and tends to reject legitimately
- * -phrased real questions ("what happens if I miss a deadline?" has no
- * obvious procurement keyword), which is a worse failure mode for real
- * users than occasionally letting a borderline question through. The
- * system instruction below is explicit about what to refuse and how.
+ * not a keyword filter — see the reasoning in this file's history if
+ * you're wondering why no keyword pre-filter exists here.
  */
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 const SYSTEM_INSTRUCTION = `You are Tender Reach's procurement assistant, helping Zimbabwean suppliers understand public tenders and the PRAZ procurement process.
 
