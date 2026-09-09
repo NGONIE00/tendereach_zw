@@ -1,20 +1,15 @@
 const { processIncomingMessage } = require("./_shared/core");
 const messages = require("./_shared/messages");
-const { sendWhatsAppMessage } = require("./_shared/whatsappClient");
+const { sendWhatsAppMessage, sendTypingIndicator } = require("./_shared/whatsappClient");
 
 /**
- * Vercel serverless function replacing the old Express route at
- * src/whatsapp/webhookRoutes.js (mounted at /webhook there; this one
- * lives at /api/webhook — update Meta's Callback URL to match).
+ * Vercel serverless function for the WhatsApp webhook (/api/webhook).
  *
- * IMPORTANT DIFFERENCE FROM THE OLD SERVER: this function awaits the
- * full processIncomingMessage() call (including any Gemini/Airtable/
- * Supabase work) BEFORE responding to Meta. The old Express server
- * could ack with 200 immediately and keep working in the background
- * because it was a long-running process; a serverless function may be
- * frozen the instant it returns, so background work can't be relied on
- * here. This adds a small delay (typically 1-3 seconds) to the webhook
- * response, which is within what Meta tolerates.
+ * Shows a typing indicator immediately on receiving a text message,
+ * before the (potentially slow, 1-3+ second) Gemini/Airtable work in
+ * processIncomingMessage — see whatsappClient.js's sendTypingIndicator
+ * for why this matters given serverless awaits the full response
+ * before replying.
  */
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
@@ -43,7 +38,7 @@ module.exports = async function handler(req, res) {
     const message = value && value.messages && value.messages[0];
 
     if (!message) {
-      res.status(200).end(); // status updates, read receipts — nothing to do
+      res.status(200).end();
       return;
     }
 
@@ -55,13 +50,15 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Fire the typing indicator without blocking on it — best-effort,
+    // never delays the actual processing below.
+    sendTypingIndicator(message.id);
+
     const text = message.text.body;
     await processIncomingMessage("whatsapp", fromPhoneNumber, text, sendWhatsAppMessage);
     res.status(200).end();
   } catch (err) {
     console.error("[whatsapp] Error handling incoming webhook payload:", err.message);
-    // Still ack 200 — Meta will retry aggressively on non-200, which
-    // isn't helpful here since the error already happened.
     res.status(200).end();
   }
 };

@@ -1,23 +1,41 @@
 /**
  * POST /api/ask
- * Body: { question: string }
+ * Body: { question: string, history?: Array<{role: "user"|"model", text: string}> }
  *
  * Proxies a procurement question to Gemini, keeping GEMINI_API_KEY
- * server-side (never exposed to the browser). Optionally grounds the
- * answer in a handful of currently-open tenders pulled from Supabase
- * (server-side, using the service role key — also never exposed).
+ * server-side. Now supports real multi-turn conversation: pass the
+ * prior turns as `history` and Gemini sees the whole thread, not just
+ * the latest question in isolation — genuine conversational memory,
+ * not just chat-bubble styling on the frontend.
  *
- * Requires these Vercel Environment Variables to be set before this
- * works (Project Settings -> Environment Variables):
+ * System instruction kept in sync by hand with
+ * docs/api/_shared/gemini.js — if you change one, change the other.
+ *
+ * Requires these Vercel Environment Variables:
  *   GEMINI_API_KEY
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *
- * Until those are set, this returns a clear "not configured yet" error
- * rather than failing silently or pretending to answer.
  */
 
 const GEMINI_MODEL = "gemini-3.6-flash";
+const MAX_HISTORY_TURNS = 10; // caps context size/cost — plenty for a real conversation
+
+const SYSTEM_INSTRUCTION = `You are Tender Reach's procurement assistant, helping Zimbabwean suppliers understand public tenders and the PRAZ procurement process.
+
+SCOPE — you only answer questions about:
+- Zimbabwean public procurement, tenders, and the PRAZ eGP process
+- Supplier registration, compliance, and eligibility requirements for public tenders
+- Understanding or interpreting a specific tender notice
+- General guidance on preparing a bid or tender submission
+
+If a question is NOT about one of these topics — including general knowledge, other countries' procurement systems, personal advice unrelated to procurement, coding help, or anything else — politely decline and redirect. Use language close to: "I'm built specifically to help with Zimbabwean public procurement and tenders — I can't help with that, but feel free to ask me anything about tenders, PRAZ, or supplier registration." Do not answer the off-topic question even partially first.
+
+STYLE:
+- Plain, simple language — avoid legal jargon.
+- Concise: a few short paragraphs at most.
+- If asked about a specific tender you don't have information on, say so honestly rather than guessing, and suggest forwarding the tender notice on WhatsApp for a detailed summary.
+- Never invent tender details, deadlines, or requirements you don't actually have.
+- You may reference earlier parts of this conversation naturally.`;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -25,7 +43,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { question } = req.body || {};
+  const { question, history } = req.body || {};
   if (!question || typeof question !== "string" || !question.trim()) {
     res.status(400).json({ error: "Missing 'question' in request body." });
     return;
@@ -34,16 +52,11 @@ export default async function handler(req, res) {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) {
     res.status(503).json({
-      error:
-        "AI assistant isn't configured yet — GEMINI_API_KEY is missing from this deployment's environment variables.",
+      error: "AI assistant isn't configured yet — GEMINI_API_KEY is missing from this deployment's environment variables.",
     });
     return;
   }
 
-  // Best-effort grounding: pull a few currently-open tenders so the
-  // model has real, current context rather than answering from
-  // training data alone. If this fails (e.g. Supabase not configured),
-  // we still answer the general question — just without live examples.
   let tenderContext = "";
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -55,10 +68,7 @@ export default async function handler(req, res) {
         `&closing_date=gt.${encodeURIComponent(nowIso)}` +
         `&order=closing_date.asc&limit=8`;
       const tendersRes = await fetch(restUrl, {
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
+        headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
       });
       if (tendersRes.ok) {
         const tenders = await tendersRes.json();
@@ -66,10 +76,7 @@ export default async function handler(req, res) {
           tenderContext =
             "\n\nSome currently open tenders you can reference if relevant (do not invent others beyond this list):\n" +
             tenders
-              .map(
-                (t) =>
-                  `- ${t.title} (${t.category_names || "uncategorized"}) — ${t.procuring_entity}, closes ${t.closing_date}`
-              )
+              .map((t) => `- ${t.title} (${t.category_names || "uncategorized"}) — ${t.procuring_entity}, closes ${t.closing_date}`)
               .join("\n");
         }
       }
@@ -78,9 +85,18 @@ export default async function handler(req, res) {
     console.error("[api/ask] Tender context fetch failed (continuing without it):", err.message);
   }
 
-  const systemInstruction =
-    "You are Tender Reach's procurement assistant, helping Zimbabwean suppliers understand public tenders and the PRAZ procurement process. Answer in plain, simple language, avoid legal jargon, and keep answers concise (a few short paragraphs at most). If asked about a specific tender you don't have information on, say so honestly and suggest the supplier forward the tender notice on WhatsApp for a detailed summary — don't guess at details." +
-    tenderContext;
+  // Build the multi-turn contents array: prior history first, then the
+  // new question. Each history item's role must already be "user" or
+  // "model" (Gemini's expected values) — validated/sanitized here so a
+  // malformed client payload can't break the request shape.
+  const safeHistory = Array.isArray(history)
+    ? history
+        .filter((turn) => turn && (turn.role === "user" || turn.role === "model") && typeof turn.text === "string")
+        .slice(-MAX_HISTORY_TURNS)
+        .map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] }))
+    : [];
+
+  const contents = [...safeHistory, { role: "user", parts: [{ text: question }] }];
 
   try {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
@@ -88,8 +104,8 @@ export default async function handler(req, res) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: question }] }],
-        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION + tenderContext }] },
         generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
       }),
     });

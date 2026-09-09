@@ -47,3 +47,36 @@ async function sendWhatsAppMessage(toPhoneNumber, bodyText) {
 }
 
 module.exports = { sendWhatsAppMessage };
+
+async function sendTypingIndicator(incomingMessageId) {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = process.env.WHATSAPP_API_TOKEN;
+  if (!phoneNumberId || !token || !incomingMessageId) return;
+
+  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`;
+
+  try {
+    await axios.post(
+      url,
+      {
+        messaging_product: "whatsapp",
+        status: "read",
+        message_id: incomingMessageId,
+        typing_indicator: { type: "text" },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  } catch (err) {
+    console.error(
+      "Failed to send typing indicator (non-fatal, continuing):",
+      err.response ? err.response.data : err.message
+    );
+  }
+}
+
+module.exports = { sendWhatsAppMessage, sendTypingIndicator };

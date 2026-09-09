@@ -1,19 +1,17 @@
 /**
  * Knowledge Centre page logic:
- *  1. Tender search/filter/table with pagination, reading from Supabase
- *     (public anon key, safe — see supabase/migrations/003_public_tenders_read.sql)
- *  2. AI Q&A widget, calling the /api/ask serverless function
- *     (keeps the Gemini key server-side — see docs/api/ask.js)
- *  3. Client-side caching — see the Cache section below.
+ *  1. Tender search/filter/table with pagination, caching (see the
+ *     Cache section) — reads from Supabase directly.
+ *  2. AI Q&A widget — now a real conversational thread with multi-turn
+ *     memory, calling /api/ask (keeps the Gemini key server-side).
  *
  * Requires the Supabase JS client loaded first:
  *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
  * and SUPABASE_URL / SUPABASE_ANON_KEY filled in below.
  */
 
-const SUPABASE_URL ="https://njbvwidesxizthxjzkku.supabase.co"; 
-const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qYnZ3aWRlc3hpenRoeGp6a2t1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTMyNzksImV4cCI6MjA5OTE2OTI3OX0.4PGc2rSbJlXoth9shHWCpP86tohR-4F6RRe7PHYVz74"; 
-
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
 const PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 400;
@@ -33,34 +31,14 @@ let sortAscending = true;
 let searchDebounceTimer = null;
 
 /* ============================================================
-   CLIENT-SIDE CACHE
-   ============================================================
-   Two caches, different lifetimes:
-
-   - Category list rarely changes (new categories only appear when
-     PRAZ introduces a new supplier category) -> localStorage,
-     30-minute TTL, persists across visits so returning users don't
-     re-fetch it every time.
-
-   - Search results change whenever the scraper runs (every 6-12
-     hours per docs/PROCUREMENT_KNOWLEDGE_CENTRE.md) and there are
-     many possible search/filter/page combinations -> sessionStorage
-     (cleared when the tab closes, so it never grows unbounded across
-     visits), 3-minute TTL — long enough to make paging back-and-forth
-     or repeated searches instant, short enough that a scraper refresh
-     is reflected within one browsing session.
-
-   Both only ever cache public tender data (never anything from the
-   AI widget or anything personal) and both fail silently if storage
-   is unavailable (private browsing, quota exceeded, disabled) —
-   caching is a performance optimization, not a requirement, so a
-   failure here should never break the page.
+   CLIENT-SIDE CACHE (tender search only — chat history has its
+   own separate in-memory array below, not cached/persisted)
    ============================================================ */
 
 const CACHE_PREFIX = "tr_cache_";
 const CATEGORY_CACHE_KEY = CACHE_PREFIX + "categories";
-const CATEGORY_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
-const SEARCH_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+const CATEGORY_CACHE_TTL_MS = 30 * 60 * 1000;
+const SEARCH_CACHE_TTL_MS = 3 * 60 * 1000;
 
 function readCache(storage, key, ttlMs) {
   try {
@@ -73,7 +51,7 @@ function readCache(storage, key, ttlMs) {
     }
     return value;
   } catch (err) {
-    return null; // corrupted entry or storage unavailable — just miss the cache
+    return null;
   }
 }
 
@@ -81,7 +59,6 @@ function writeCache(storage, key, value) {
   try {
     storage.setItem(key, JSON.stringify({ value, cachedAt: Date.now() }));
   } catch (err) {
-    // Storage full or unavailable — caching is best-effort, not required.
     console.warn("[knowledge-centre] Cache write skipped:", err.message);
   }
 }
@@ -90,21 +67,7 @@ function searchCacheKey(searchTerm, categoryCode, page, ascending) {
   return `${CACHE_PREFIX}search_${searchTerm}|${categoryCode}|${page}|${ascending}`;
 }
 
-/** Clears all of this page's cached entries — called after the AI
- *  widget isn't relevant here, but exposed in case a manual "refresh
- *  data" action is added later. */
-function clearTenderCaches() {
-  try {
-    Object.keys(sessionStorage)
-      .filter((k) => k.startsWith(CACHE_PREFIX))
-      .forEach((k) => sessionStorage.removeItem(k));
-    localStorage.removeItem(CATEGORY_CACHE_KEY);
-  } catch (err) {
-    /* no-op */
-  }
-}
-
-/* ---------- Category filter: populated from real data, cached ---------- */
+/* ---------- Category filter ---------- */
 
 async function loadCategoryOptions() {
   const client = getSupabaseClient();
@@ -124,10 +87,7 @@ async function loadCategoryOptions() {
       .not("category_codes", "is", null)
       .limit(500);
 
-    if (error || !data) {
-      console.error("[knowledge-centre] Failed to load categories:", error && error.message);
-      return;
-    }
+    if (error || !data) return;
 
     const seen = new Map();
     data.forEach((row) => {
@@ -162,7 +122,7 @@ function populateCategorySelect(select, options) {
   });
 }
 
-/* ---------- Tender search / filter / sort / paginate, cached per query ---------- */
+/* ---------- Tender search / filter / sort / paginate ---------- */
 
 async function loadTenders(resetToFirstPage = true) {
   const client = getSupabaseClient();
@@ -215,11 +175,9 @@ async function loadTenders(resetToFirstPage = true) {
 
     if (error) {
       statusEl.textContent = "Couldn't load tenders right now — please try again shortly.";
-      console.error("[knowledge-centre] Supabase query error:", error.message);
       paginationEl.innerHTML = "";
       return;
     }
-
     if (!data || data.length === 0) {
       statusEl.textContent = "No matching tenders found.";
       paginationEl.innerHTML = "";
@@ -227,9 +185,7 @@ async function loadTenders(resetToFirstPage = true) {
     }
 
     totalPages = Math.max(1, Math.ceil((count || data.length) / PAGE_SIZE));
-
     writeCache(sessionStorage, cacheKey, { rows: data, count, totalPages });
-
     renderResults(data, count, resultsBody, statusEl);
     renderPagination(paginationEl);
   } catch (err) {
@@ -258,33 +214,22 @@ function renderResults(rows, count, resultsBody, statusEl) {
 }
 
 function sanitizeSearchTerm(raw) {
-  return raw
-    .replace(/[,()]/g, "")
-    .replace(/%/g, "\\%")
-    .replace(/_/g, "\\_")
-    .trim();
+  return raw.replace(/[,()]/g, "").replace(/%/g, "\\%").replace(/_/g, "\\_").trim();
 }
 
 function renderPagination(container) {
   container.innerHTML = "";
-
   const prevBtn = document.createElement("button");
   prevBtn.textContent = "← Prev";
   prevBtn.className = "btn-outline";
   prevBtn.disabled = currentPage <= 1;
-  prevBtn.addEventListener("click", () => {
-    currentPage -= 1;
-    loadTenders(false);
-  });
+  prevBtn.addEventListener("click", () => { currentPage -= 1; loadTenders(false); });
 
   const nextBtn = document.createElement("button");
   nextBtn.textContent = "Next →";
   nextBtn.className = "btn-outline";
   nextBtn.disabled = currentPage >= totalPages;
-  nextBtn.addEventListener("click", () => {
-    currentPage += 1;
-    loadTenders(false);
-  });
+  nextBtn.addEventListener("click", () => { currentPage += 1; loadTenders(false); });
 
   const pageLabel = document.createElement("span");
   pageLabel.className = "pagination-label";
@@ -301,41 +246,81 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-/* ---------- AI Q&A widget (not cached — every question is distinct) ---------- */
+/* ============================================================
+   AI Q&A — CONVERSATIONAL CHAT THREAD
+   ============================================================
+   Maintains real multi-turn history client-side (in memory only —
+   not persisted across page reloads, and never cached/stored, since
+   this may contain whatever the user chooses to ask). Sent with each
+   request so /api/ask can give Gemini the full conversation context,
+   not just the latest message in isolation.
+   ============================================================ */
+
+let chatHistory = []; // [{ role: "user"|"model", text: string }]
+
+function appendChatBubble(role, text) {
+  const thread = document.getElementById("ai-chat-thread");
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble chat-bubble-${role}`;
+  bubble.textContent = text;
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+function appendTypingBubble() {
+  const thread = document.getElementById("ai-chat-thread");
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble chat-bubble-model chat-bubble-typing";
+  bubble.id = "ai-typing-bubble";
+  bubble.innerHTML = "<span></span><span></span><span></span>";
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function removeTypingBubble() {
+  const bubble = document.getElementById("ai-typing-bubble");
+  if (bubble) bubble.remove();
+}
 
 async function askQuestion() {
   const input = document.getElementById("ai-question-input");
-  const responseEl = document.getElementById("ai-response");
   const askBtn = document.getElementById("ai-ask-btn");
   const question = input.value.trim();
   if (!question) return;
 
+  appendChatBubble("user", question);
+  input.value = "";
   askBtn.disabled = true;
-  askBtn.textContent = "Thinking…";
-  responseEl.innerHTML = "";
+  appendTypingBubble();
 
   try {
     const res = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, history: chatHistory }),
     });
     const data = await res.json();
 
+    removeTypingBubble();
+
     if (!res.ok) {
-      responseEl.innerHTML = `<p class="meta">${escapeHtml(
-        data.error || "The assistant isn't available right now — try WhatsApp instead."
-      )} <a href="contact.html">Ask on WhatsApp →</a></p>`;
+      appendChatBubble(
+        "model",
+        (data.error || "The assistant isn't available right now — try WhatsApp instead.") + " (Ask on WhatsApp via the Contact page.)"
+      );
       return;
     }
 
-    responseEl.innerHTML = `<p>${escapeHtml(data.answer)}</p>`;
+    appendChatBubble("model", data.answer);
+    chatHistory.push({ role: "user", text: question });
+    chatHistory.push({ role: "model", text: data.answer });
   } catch (err) {
-    responseEl.innerHTML = `<p class="meta">Couldn't reach the assistant. <a href="contact.html">Ask on WhatsApp →</a></p>`;
+    removeTypingBubble();
+    appendChatBubble("model", "Couldn't reach the assistant. Try again, or ask on WhatsApp via the Contact page.");
     console.error("[knowledge-centre] /api/ask request failed:", err.message);
   } finally {
     askBtn.disabled = false;
-    askBtn.textContent = "Ask";
   }
 }
 
@@ -349,20 +334,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (searchBtn) {
     searchBtn.addEventListener("click", () => loadTenders(true));
-
     searchInput.addEventListener("input", () => {
       clearTimeout(searchDebounceTimer);
       searchDebounceTimer = setTimeout(() => loadTenders(true), SEARCH_DEBOUNCE_MS);
     });
     searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        clearTimeout(searchDebounceTimer);
-        loadTenders(true);
-      }
+      if (e.key === "Enter") { clearTimeout(searchDebounceTimer); loadTenders(true); }
     });
-
     categorySelect.addEventListener("change", () => loadTenders(true));
-
     if (sortBtn) {
       sortBtn.addEventListener("click", () => {
         sortAscending = !sortAscending;
@@ -370,7 +349,6 @@ document.addEventListener("DOMContentLoaded", function () {
         loadTenders(false);
       });
     }
-
     loadCategoryOptions();
     loadTenders(true);
   }

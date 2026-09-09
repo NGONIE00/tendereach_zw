@@ -83,15 +83,16 @@
 <!-- ============ AI Q&A WIDGET ============ -->
 <section class="container section-border-top">
   <div class="section-head">
+    <span class="eyebrow">Ask</span>
     <h2>Ask a procurement question</h2>
-    <p>Get a plain-language answer, grounded in currently open tenders where relevant.</p>
+    <p>Have a conversation — ask a follow-up and the assistant remembers context.</p>
   </div>
   <div class="ai-widget" style="max-width: 640px; margin: 0 auto;">
+    <div class="ai-chat-thread" id="ai-chat-thread"></div>
     <div class="ai-widget-input-row">
       <input type="text" id="ai-question-input" placeholder="e.g. What documents do I need to register as a supplier?" />
       <button id="ai-ask-btn" class="btn">Ask</button>
     </div>
-    <div id="ai-response" class="ai-widget-response"></div>
   </div>
 </section>
 
