@@ -3,18 +3,18 @@ const messages = require("./messages");
 /**
  * Pure routing function: given the user's current session and their
  * incoming message text, decide what to reply and how the session
- * should change. Deliberately has no side effects (no network calls,
- * no db writes) so it can be unit tested directly.
+ * should change.
  *
- * CHANGE: routePath2's question branch no longer returns the static
- * placeholder as `reply` — it signals `__needsAiAnswer` with the
- * question text instead, and returns `reply: null`. The actual Gemini
- * call (async, real I/O) happens in src/funnel/core.js, which checks
- * this signal the same way it already checks `__interviewCompleted`
- * for Airtable writes — keeping this file pure.
+ * THIS COPY LIVES IN docs/api/_shared/ for the live Vercel serverless
+ * deployment — it must be kept in sync with src/funnel/router.js by
+ * hand (two separate deployments, can't share the file directly).
  *
- * @param {object} session - current session object from sessionStore
- * @param {string} rawText - the incoming message text from the user
+ * routePath2's question branch signals `__needsAiAnswer` with the
+ * question text (reply: null) instead of returning a canned reply —
+ * docs/api/_shared/core.js checks this signal and calls Gemini.
+ *
+ * @param {object} session
+ * @param {string} rawText
  * @returns {{ reply: string|null, sessionUpdates: object }}
  */
 function route(session, rawText) {
@@ -122,9 +122,6 @@ function routePath1(session, text, rawText) {
 }
 
 function routePath2(session, text, rawText) {
-  // Replying "1"/"2" to the closing prompt — only reachable once
-  // core.js has set session.awaitingClosingReply after delivering an
-  // AI answer (see core.js).
   if (session.awaitingClosingReply && (text === "1" || text === "2")) {
     if (text === "1") {
       return {
@@ -143,8 +140,6 @@ function routePath2(session, text, rawText) {
     };
   }
 
-  // Any other text while in path2 is treated as the actual question —
-  // signal core.js to call the AI rather than replying here directly.
   return {
     reply: null,
     sessionUpdates: { internalTag: "Active User", __needsAiAnswer: true, __aiQuestion: rawText },
