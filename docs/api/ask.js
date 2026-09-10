@@ -106,7 +106,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         contents,
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION + tenderContext }] },
-        generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
+        generationConfig: { maxOutputTokens: 900, temperature: 0.3 },
       }),
     });
 

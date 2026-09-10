@@ -14,8 +14,9 @@ function freshSession(overrides = {}) {
 }
 
 describe("top-level menu routing", () => {
-  test("choosing 1 starts the Founding Supplier interview", () => {
+  test("choosing 1 starts the Founding Supplier interview with a progress indicator", () => {
     const { reply, sessionUpdates } = route(freshSession(), "1");
+    expect(reply).toContain("Question 1 of 7");
     expect(reply).toContain(messages.path1.questions[0]);
     expect(sessionUpdates.currentPath).toBe("path1");
     expect(sessionUpdates.interviewStep).toBe(1);
@@ -62,12 +63,13 @@ describe("global commands", () => {
 });
 
 describe("Founding Supplier interview flow (Path 1)", () => {
-  test("progresses through all 7 questions and completes", () => {
+  test("progresses through all 7 questions, each with a correct progress indicator, and completes", () => {
     let session = freshSession({ currentPath: "path1", interviewStep: 1 });
 
     for (let i = 1; i <= 6; i++) {
       const { reply, sessionUpdates } = route(session, `answer to Q${i}`);
-      expect(reply).toBe(messages.path1.questions[i]);
+      expect(reply).toContain(`Question ${i + 1} of 7`);
+      expect(reply).toContain(messages.path1.questions[i]);
       session = { ...session, ...sessionUpdates };
     }
 
@@ -113,10 +115,11 @@ describe("Path 2 (Ask a procurement question)", () => {
     expect(sessionUpdates.__aiQuestion).toBe("What documents do I need?");
   });
 
-  test('once awaitingClosingReply is true, replying "1" routes into the Founding Supplier interview', () => {
+  test('once awaitingClosingReply is true, replying "1" routes into the Founding Supplier interview with a progress indicator', () => {
     const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
     const { reply, sessionUpdates } = route(session, "1");
 
+    expect(reply).toContain("Question 1 of 7");
     expect(reply).toContain(messages.path1.questions[0]);
     expect(sessionUpdates.currentPath).toBe("path1");
     expect(sessionUpdates.internalTag).toBe("Warm Lead");
@@ -143,9 +146,10 @@ describe("Path 2 (Ask a procurement question)", () => {
 });
 
 describe("Path 3 (Learn what Tender Reach does)", () => {
-  test('replying "1" to the CTA routes into the Founding Supplier interview', () => {
+  test('replying "1" to the CTA routes into the Founding Supplier interview with a progress indicator', () => {
     const session = freshSession({ currentPath: "path3" });
-    const { sessionUpdates } = route(session, "1");
+    const { reply, sessionUpdates } = route(session, "1");
+    expect(reply).toContain("Question 1 of 7");
     expect(sessionUpdates.currentPath).toBe("path1");
     expect(sessionUpdates.internalTag).toBe("Warm Lead");
   });

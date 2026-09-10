@@ -1,21 +1,18 @@
 const messages = require("./messages");
 
 /**
- * Pure routing function: given the user's current session and their
- * incoming message text, decide what to reply and how the session
- * should change. Deliberately has no side effects (no network calls,
- * no db writes) so it can be unit tested directly.
+ * Pure routing function. Same logic as before, plus: every Founding
+ * Supplier interview question now shows a "Question X of 7" progress
+ * line, so users know how much is left — a real, low-risk improvement
+ * that needed no change to core.js, deliberately, given how easy it's
+ * proven to be for the two deployment copies of these files (this one
+ * and src/funnel/router.js) to drift out of sync.
  *
- * CHANGE: routePath2's question branch no longer returns the static
- * placeholder as `reply` — it signals `__needsAiAnswer` with the
- * question text instead, and returns `reply: null`. The actual Gemini
- * call (async, real I/O) happens in src/funnel/core.js, which checks
- * this signal the same way it already checks `__interviewCompleted`
- * for Airtable writes — keeping this file pure.
- *
- * @param {object} session - current session object from sessionStore
- * @param {string} rawText - the incoming message text from the user
- * @returns {{ reply: string|null, sessionUpdates: object }}
+ * REMINDER: this exact file also lives at src/funnel/router.js for
+ * local dev/testing, and must be updated there too, by hand, every
+ * time. That mismatch already caused one real bug (WhatsApp Path 2
+ * silently never reaching the AI) — check both copies whenever you
+ * touch this logic.
  */
 function route(session, rawText) {
   const text = (rawText || "").trim().toLowerCase();
@@ -64,11 +61,17 @@ function route(session, rawText) {
   }
 }
 
+/** e.g. "Question 3 of 7\n" + the actual question text */
+function withProgress(stepNumber, questionText) {
+  const total = messages.path1.questions.length;
+  return `Question ${stepNumber} of ${total}\n${questionText}`;
+}
+
 function routeTopLevelMenu(text) {
   switch (text) {
     case "1":
       return {
-        reply: messages.path1.intro + "\n\n" + messages.path1.questions[0],
+        reply: messages.path1.intro + "\n\n" + withProgress(1, messages.path1.questions[0]),
         sessionUpdates: { currentPath: "path1", interviewStep: 1, internalTag: "Founding Lead" },
       };
     case "2":
@@ -103,9 +106,10 @@ function routePath1(session, text, rawText) {
   updatedAnswers[currentStep - 1] = rawText;
 
   if (currentStep < totalQuestions) {
+    const nextStep = currentStep + 1;
     return {
-      reply: messages.path1.questions[currentStep],
-      sessionUpdates: { interviewStep: currentStep + 1, interviewAnswers: updatedAnswers },
+      reply: withProgress(nextStep, messages.path1.questions[currentStep]),
+      sessionUpdates: { interviewStep: nextStep, interviewAnswers: updatedAnswers },
     };
   }
 
@@ -122,13 +126,10 @@ function routePath1(session, text, rawText) {
 }
 
 function routePath2(session, text, rawText) {
-  // Replying "1"/"2" to the closing prompt — only reachable once
-  // core.js has set session.awaitingClosingReply after delivering an
-  // AI answer (see core.js).
   if (session.awaitingClosingReply && (text === "1" || text === "2")) {
     if (text === "1") {
       return {
-        reply: messages.path1.intro + "\n\n" + messages.path1.questions[0],
+        reply: messages.path1.intro + "\n\n" + withProgress(1, messages.path1.questions[0]),
         sessionUpdates: {
           currentPath: "path1",
           interviewStep: 1,
@@ -143,8 +144,6 @@ function routePath2(session, text, rawText) {
     };
   }
 
-  // Any other text while in path2 is treated as the actual question —
-  // signal core.js to call the AI rather than replying here directly.
   return {
     reply: null,
     sessionUpdates: { internalTag: "Active User", __needsAiAnswer: true, __aiQuestion: rawText },
@@ -154,7 +153,7 @@ function routePath2(session, text, rawText) {
 function routePath3(session, text) {
   if (text === "1") {
     return {
-      reply: messages.path1.intro + "\n\n" + messages.path1.questions[0],
+      reply: messages.path1.intro + "\n\n" + withProgress(1, messages.path1.questions[0]),
       sessionUpdates: { currentPath: "path1", interviewStep: 1, internalTag: "Warm Lead" },
     };
   }
