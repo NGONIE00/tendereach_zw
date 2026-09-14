@@ -45,8 +45,30 @@
       });
     }
 
+    initNavScrollShadow();
     initCarousels();
   });
+
+  /**
+   * Adds a subtle shadow to the sticky nav once the page has scrolled
+   * past the very top — the .nav--scrolled CSS rule already existed
+   * but nothing was ever toggling it; this closes that gap.
+   */
+  function initNavScrollShadow() {
+    var nav = document.querySelector(".nav");
+    if (!nav) return;
+
+    function updateShadow() {
+      if (window.scrollY > 4) {
+        nav.classList.add("nav--scrolled");
+      } else {
+        nav.classList.remove("nav--scrolled");
+      }
+    }
+
+    updateShadow();
+    window.addEventListener("scroll", updateShadow, { passive: true });
+  }
 
   function initCarousels() {
     var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -69,7 +91,7 @@
       }
 
       function startTimer() {
-        if (prefersReduced) return; // respect reduced-motion: no autoplay
+        if (prefersReduced) return;
         clearInterval(timer);
         timer = setInterval(function () {
           goTo(index + 1);

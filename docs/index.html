@@ -3,12 +3,103 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tender Reach — Public procurement, made clear</title>
-<meta name="description" content="Tender Reach helps Zimbabwean businesses discover, understand, and prepare for public procurement opportunities — in plain language, on WhatsApp.">
+<title>Tender Reach — Zimbabwe Public Procurement & Tender Search, Made Simple</title>
+<meta name="description" content="Search live Zimbabwean government tenders, ask procurement questions in plain language, and get supplier guidance — all in one place, powered by PRAZ's public tender data.">
+<link rel="canonical" href="https://tenderreachzw.vercel.app/">
 <link rel="icon" href="assets/logo.png">
 <link rel="stylesheet" href="styles.css">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tender Reach">
+<meta property="og:title" content="Tender Reach — Zimbabwe Public Procurement & Tender Search, Made Simple">
+<meta property="og:description" content="Search live Zimbabwean government tenders, ask procurement questions in plain language, and get supplier guidance — all in one place.">
+<meta property="og:url" content="https://tenderreachzw.vercel.app/">
+<meta property="og:image" content="https://tenderreachzw.vercel.app/assets/logo.png">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tender Reach — Zimbabwe Public Procurement & Tender Search, Made Simple">
+<meta name="twitter:description" content="Search live Zimbabwean government tenders, ask procurement questions in plain language, and get supplier guidance.">
+<meta name="twitter:image" content="https://tenderreachzw.vercel.app/assets/logo.png">
 </head>
 <body>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Tender Reach",
+  "url": "https://tenderreachzw.vercel.app/",
+  "logo": "https://tenderreachzw.vercel.app/assets/logo.png",
+  "description": "Tender Reach helps Zimbabwean businesses discover, understand, and prepare for public procurement opportunities in plain language.",
+  "sameAs": [
+    "https://www.instagram.com/tenderreach_zw",
+    "https://www.facebook.com/Tenderreachzw"
+  ],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "email": "tenderreach.info@gmail.com",
+    "url": "https://tenderreachzw.vercel.app/contact.html"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Tender Reach?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tender Reach is a free WhatsApp-based assistant and website that helps Zimbabwean businesses discover, understand, and prepare for public procurement (tender) opportunities. We turn dense tender documents into plain-language summaries and checklists."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I find tenders in Zimbabwe?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Public tenders in Zimbabwe are published on PRAZ's electronic Government Procurement (eGP) bulletin board. Tender Reach maintains a continuously refreshed, searchable index of that same public data on our Knowledge Centre page, so you can search and filter without navigating the original portal directly."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is PRAZ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PRAZ is the Procurement Regulatory Authority of Zimbabwe — the government body that regulates and oversees public procurement under the Public Procurement and Disposal of Public Assets Act. Tender Reach is an independent tool and is not affiliated with or endorsed by PRAZ."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is Tender Reach free to use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Tender discovery, plain-language summaries, deadline guidance, and our WhatsApp assistant are free, with no paywall on the core supplier support."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I register as a government supplier in Zimbabwe?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Supplier registration happens directly through PRAZ's eGP system. Tender Reach can walk you through what's typically required in plain language via WhatsApp."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does Tender Reach replace PRAZ's eGP system?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Tender Reach is a companion layer built on top of PRAZ's already-public tender data, aimed at making it easier to search and understand. Bid submission and official supplier registration still happen through PRAZ's own eGP system."
+      }
+    }
+  ]
+}
+</script>
 
 <nav class="nav">
   <div class="nav-inner">
@@ -50,23 +141,32 @@
   </div>
   <div class="card-carousel" data-autoplay="4500">
     <div class="card-track">
-      <div class="card"><img src="assets/card-tender-discovery-light.png" alt="" class="card-icon card-icon-light">
+      <div class="card">
+        <img src="assets/card-tender-discovery-light.png" alt="" class="card-icon card-icon-light">
         <img src="assets/card-tender-discovery-dark.png" alt="" class="card-icon card-icon-dark">
-        <div class="card-body"><h3>Tender Discovery</h3>
-        <p class="tagline">Find the right opportunities, faster.</p>
-        <p>Tender Reach continuously helps you discover public procurement opportunities from across Zimbabwe in one place. Search by industry, organisation, province, or keywords, receive timely alerts, and never miss relevant tenders again.</p></div>
+        <div class="card-body">
+          <h3>Tender Discovery</h3>
+          <p class="tagline">Find the right opportunities, faster.</p>
+          <p>Tender Reach continuously helps you discover public procurement opportunities from across Zimbabwe in one place. Search by industry, organisation, province, or keywords, receive timely alerts, and never miss relevant tenders again.</p>
+        </div>
       </div>
-      <div class="card"><img src="assets/card-document-guidance-light.png" alt="" class="card-icon card-icon-light">
+      <div class="card">
+        <img src="assets/card-document-guidance-light.png" alt="" class="card-icon card-icon-light">
         <img src="assets/card-document-guidance-dark.png" alt="" class="card-icon card-icon-dark">
-        <div class="card-body"><h3>Document Guidance</h3>
-        <p class="tagline">Turn complex tender documents into clear action.</p>
-        <p>Tender documents can be lengthy and difficult to understand. Tender Reach breaks them down into simple guidance, highlights important requirements, explains procurement terminology, and helps you prepare the correct documents with confidence.</p></div>
+        <div class="card-body">
+          <h3>Document Guidance</h3>
+          <p class="tagline">Turn complex tender documents into clear action.</p>
+          <p>Tender documents can be lengthy and difficult to understand. Tender Reach breaks them down into simple guidance, highlights important requirements, explains procurement terminology, and helps you prepare the correct documents with confidence.</p>
+        </div>
       </div>
-      <div class="card"><img src="assets/card-supplier-support-light.png" alt="" class="card-icon card-icon-light">
+      <div class="card">
+        <img src="assets/card-supplier-support-light.png" alt="" class="card-icon card-icon-light">
         <img src="assets/card-supplier-support-dark.png" alt="" class="card-icon card-icon-dark">
-        <div class="card-body"><h3>Supplier Support</h3>
-        <p class="tagline">Helping you succeed beyond the tender.</p>
-        <p>Winning contracts starts with being prepared. Tender Reach supports suppliers throughout their procurement journey with practical guidance, compliance support, best-practice resources, reminders, and tools designed to help businesses compete confidently for public sector opportunities.</p></div>
+        <div class="card-body">
+          <h3>Supplier Support</h3>
+          <p class="tagline">Helping you succeed beyond the tender.</p>
+          <p>Winning contracts starts with being prepared. Tender Reach supports suppliers throughout their procurement journey with practical guidance, compliance support, best-practice resources, reminders, and tools designed to help businesses compete confidently for public sector opportunities.</p>
+        </div>
       </div>
     </div>
     <div class="carousel-dots">
@@ -96,6 +196,39 @@
   </div>
 </section>
 
+<section class="container section-border-top">
+  <div class="section-head">
+    <span class="eyebrow">FAQ</span>
+    <h2>Common questions</h2>
+  </div>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>What is Tender Reach?</summary>
+      <p>Tender Reach is a free WhatsApp-based assistant and website that helps Zimbabwean businesses discover, understand, and prepare for public procurement (tender) opportunities. We turn dense tender documents into plain-language summaries and checklists.</p>
+    </details>
+    <details class="faq-item">
+      <summary>How do I find tenders in Zimbabwe?</summary>
+      <p>Public tenders in Zimbabwe are published on PRAZ's electronic Government Procurement (eGP) bulletin board. Tender Reach maintains a continuously refreshed, searchable index of that same public data on our <a href="knowledge-centre.html">Knowledge Centre</a> page, so you can search and filter without navigating the original portal directly.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What is PRAZ?</summary>
+      <p>PRAZ is the Procurement Regulatory Authority of Zimbabwe — the government body that regulates and oversees public procurement under the Public Procurement and Disposal of Public Assets Act. Tender Reach is an independent tool and is not affiliated with or endorsed by PRAZ.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Is Tender Reach free to use?</summary>
+      <p>Yes. Tender discovery, plain-language summaries, deadline guidance, and our WhatsApp assistant are free, with no paywall on the core supplier support. Read more in our <a href="about.html">About</a> page.</p>
+    </details>
+    <details class="faq-item">
+      <summary>How do I register as a government supplier in Zimbabwe?</summary>
+      <p>Supplier registration happens directly through PRAZ's eGP system. Tender Reach can walk you through what's typically required in plain language via WhatsApp — <a href="contact.html">message us</a> to get started.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Does Tender Reach replace PRAZ's eGP system?</summary>
+      <p>No. Tender Reach is a companion layer built on top of PRAZ's already-public tender data, aimed at making it easier to search and understand. Bid submission and official supplier registration still happen through PRAZ's own eGP system.</p>
+    </details>
+  </div>
+</section>
+
 <footer class="footer container">
   <div class="footer-grid">
     <div class="footer-brand">
@@ -116,7 +249,6 @@
         <li><a href="about.html#founding-supplier-programme">Founding Suppliers</a></li>
         <li><a href="about.html#how-it-works">How it works</a></li>
         <li><a href="knowledge-centre.html">Knowledge Centre</a></li>
-        <li><a href="about.html#procurement-knowledge-centre">Knowledge Centre</a></li>
       </ul>
     </div>
     <div>
