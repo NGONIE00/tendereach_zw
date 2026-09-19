@@ -1,7 +1,10 @@
 /**
- * All message copy lives here, mirroring docs/WHATSAPP_FUNNEL.md exactly.
- * If you change wording, update WHATSAPP_FUNNEL.md in the same commit —
- * see CONTRIBUTING.md.
+ * All message copy lives here, mirroring docs/WHATSAPP_FUNNEL.md.
+ * If you change wording, update that doc in the same commit.
+ *
+ * This exact file must be kept in sync BY HAND in two places:
+ *   src/funnel/messages.js       (local dev / npm test)
+ *   docs/api/_shared/messages.js (live Vercel serverless deployment)
  */
 
 const messages = {
@@ -62,6 +65,15 @@ Example:
 
 1️⃣ Yes
 2️⃣ Not now`,
+
+    /**
+     * Shown when the user replies "2" (Not now) to closingPrompt.
+     * Previously this fell through to the full `welcome` menu, which
+     * read as the bot ignoring "not now" and restarting the whole
+     * conversation. This is a graceful close instead — acknowledges
+     * their choice without re-pushing the menu on them.
+     */
+    closingAcknowledged: `No problem! 🙏 Feel free to ask another question anytime, or type "menu" to see all options.`,
   },
 
   path3: {

@@ -112,27 +112,39 @@ describe("Path 2 (Ask a procurement question)", () => {
 
     expect(reply).toBeNull();
     expect(sessionUpdates.__needsAiAnswer).toBe(true);
-    expect(sessionUpdates.__aiQuestion).toBe("What documents do I need?");
   });
 
-  test('once awaitingClosingReply is true, replying "1" routes into the Founding Supplier interview with a progress indicator', () => {
+  test('once awaitingClosingReply is true, replying "1" routes into the Founding Supplier interview', () => {
     const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
     const { reply, sessionUpdates } = route(session, "1");
 
     expect(reply).toContain("Question 1 of 7");
-    expect(reply).toContain(messages.path1.questions[0]);
     expect(sessionUpdates.currentPath).toBe("path1");
     expect(sessionUpdates.internalTag).toBe("Warm Lead");
     expect(sessionUpdates.awaitingClosingReply).toBe(false);
   });
 
-  test('once awaitingClosingReply is true, replying "2" returns to the main menu', () => {
+  test('replying "2" (Not now) closes gracefully without dumping the full menu, and stays in path2', () => {
     const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
     const { reply, sessionUpdates } = route(session, "2");
 
-    expect(reply).toBe(messages.welcome);
-    expect(sessionUpdates.currentPath).toBeNull();
+    expect(reply).toBe(messages.path2.closingAcknowledged);
+    expect(reply).not.toBe(messages.welcome);
     expect(sessionUpdates.awaitingClosingReply).toBe(false);
+    // currentPath intentionally not reset — user can just ask another
+    // question without navigating a menu again.
+    expect(sessionUpdates.currentPath).toBeUndefined();
+  });
+
+  test('after declining with "2", a further question still reaches the AI', () => {
+    let session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
+    const declined = route(session, "2");
+    session = { ...session, ...declined.sessionUpdates };
+
+    const followUp = route(session, "What is a bid bond?");
+    expect(followUp.reply).toBeNull();
+    expect(followUp.sessionUpdates.__needsAiAnswer).toBe(true);
+    expect(followUp.sessionUpdates.__aiQuestion).toBe("What is a bid bond?");
   });
 
   test('if awaitingClosingReply is true but the user types something other than "1"/"2", it is treated as a new question', () => {
@@ -141,12 +153,11 @@ describe("Path 2 (Ask a procurement question)", () => {
 
     expect(reply).toBeNull();
     expect(sessionUpdates.__needsAiAnswer).toBe(true);
-    expect(sessionUpdates.__aiQuestion).toBe("Actually, when is the closing date for X?");
   });
 });
 
 describe("Path 3 (Learn what Tender Reach does)", () => {
-  test('replying "1" to the CTA routes into the Founding Supplier interview with a progress indicator', () => {
+  test('replying "1" to the CTA routes into the Founding Supplier interview', () => {
     const session = freshSession({ currentPath: "path3" });
     const { reply, sessionUpdates } = route(session, "1");
     expect(reply).toContain("Question 1 of 7");

@@ -1,18 +1,14 @@
 const messages = require("./messages");
 
 /**
- * Pure routing function. Same logic as before, plus: every Founding
- * Supplier interview question now shows a "Question X of 7" progress
- * line, so users know how much is left — a real, low-risk improvement
- * that needed no change to core.js, deliberately, given how easy it's
- * proven to be for the two deployment copies of these files (this one
- * and src/funnel/router.js) to drift out of sync.
+ * Pure routing function: given the user's current session and their
+ * incoming message text, decide what to reply and how the session
+ * should change. No side effects — async work (Gemini, Airtable) is
+ * signalled via sessionUpdates flags and handled in core.js.
  *
- * REMINDER: this exact file also lives at src/funnel/router.js for
- * local dev/testing, and must be updated there too, by hand, every
- * time. That mismatch already caused one real bug (WhatsApp Path 2
- * silently never reaching the AI) — check both copies whenever you
- * touch this logic.
+ * Keep this file in sync BY HAND across:
+ *   src/funnel/router.js        (local dev / npm test)
+ *   docs/api/_shared/router.js  (live Vercel serverless deployment)
  */
 function route(session, rawText) {
   const text = (rawText || "").trim().toLowerCase();
@@ -138,9 +134,14 @@ function routePath2(session, text, rawText) {
         },
       };
     }
+    // "Not now" — acknowledge gracefully and let the conversation rest.
+    // Previously this dumped the full welcome menu back at the user,
+    // which read as the bot ignoring their answer and restarting.
+    // currentPath stays "path2" so they can simply ask another
+    // question without re-navigating any menu.
     return {
-      reply: messages.welcome,
-      sessionUpdates: { currentPath: null, awaitingClosingReply: false },
+      reply: messages.path2.closingAcknowledged,
+      sessionUpdates: { awaitingClosingReply: false },
     };
   }
 

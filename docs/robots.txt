@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tenderreachzw.vercel.app/sitemap.xml
+Sitemap: https://tendereachzw.vercel.app/sitemap.xml

@@ -1,0 +1,38 @@
+name: Refresh Tender Index
+
+# Runs the PRAZ tender scraper automatically every 6 hours, plus allows
+# manually triggering it from the GitHub Actions tab (Run workflow
+# button) for testing or an on-demand refresh.
+#
+# SETUP REQUIRED before this works — add these as GitHub repo secrets
+# (Settings -> Secrets and variables -> Actions -> New repository secret):
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+# These are the only two the scraper needs — it doesn't touch
+# WhatsApp/Gemini/Airtable at all.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours, UTC
+  workflow_dispatch: {}       # manual "Run workflow" button in GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tender scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node src/tenders/run.js

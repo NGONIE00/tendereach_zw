@@ -1,13 +1,14 @@
 /**
  * Knowledge Centre page logic:
- *  1. Tender search/filter/table with pagination, caching (see the
- *     Cache section) — reads from Supabase directly.
- *  2. AI Q&A widget — now a real conversational thread with multi-turn
- *     memory, calling /api/ask (keeps the Gemini key server-side).
+ *  1. Tender search/filter/table with pagination, caching — reads from
+ *     Supabase directly. FIXED: now filters to only currently-open
+ *     tenders (closing_date in the future) — previously showed every
+ *     tender ever scraped, sorted with the oldest/already-closed ones
+ *     first, since there was no date filter at all.
+ *  2. AI Q&A widget — conversational thread with multi-turn memory.
  *
- * Requires the Supabase JS client loaded first:
- *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
- * and SUPABASE_URL / SUPABASE_ANON_KEY filled in below.
+ * Requires the Supabase JS client loaded first and SUPABASE_URL /
+ * SUPABASE_ANON_KEY filled in below.
  */
 
 const SUPABASE_URL = "https://njbvwidesxizthxjzkku.supabase.co";
@@ -30,10 +31,7 @@ let totalPages = 1;
 let sortAscending = true;
 let searchDebounceTimer = null;
 
-/* ============================================================
-   CLIENT-SIDE CACHE (tender search only — chat history has its
-   own separate in-memory array below, not cached/persisted)
-   ============================================================ */
+/* ---------- Cache ---------- */
 
 const CACHE_PREFIX = "tr_cache_";
 const CATEGORY_CACHE_KEY = CACHE_PREFIX + "categories";
@@ -85,6 +83,7 @@ async function loadCategoryOptions() {
       .from("tenders")
       .select("category_codes, category_names")
       .not("category_codes", "is", null)
+      .gt("closing_date", new Date().toISOString())
       .limit(500);
 
     if (error || !data) return;
@@ -156,6 +155,7 @@ async function loadTenders(resetToFirstPage = true) {
         "reference_number, title, category_names, procuring_entity, closing_date, source_url, category_codes",
         { count: "exact" }
       )
+      .gt("closing_date", new Date().toISOString())
       .order("closing_date", { ascending: sortAscending });
 
     if (searchTerm.length >= MIN_SEARCH_LENGTH) {
@@ -179,7 +179,7 @@ async function loadTenders(resetToFirstPage = true) {
       return;
     }
     if (!data || data.length === 0) {
-      statusEl.textContent = "No matching tenders found.";
+      statusEl.textContent = "No open tenders match your search right now.";
       paginationEl.innerHTML = "";
       return;
     }
@@ -195,7 +195,7 @@ async function loadTenders(resetToFirstPage = true) {
 }
 
 function renderResults(rows, count, resultsBody, statusEl) {
-  statusEl.textContent = `${count} tender${count === 1 ? "" : "s"} found — page ${currentPage} of ${totalPages}.`;
+  statusEl.textContent = `${count} open tender${count === 1 ? "" : "s"} — page ${currentPage} of ${totalPages}.`;
   resultsBody.innerHTML = "";
   rows.forEach((t) => {
     const row = document.createElement("tr");
@@ -246,17 +246,9 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-/* ============================================================
-   AI Q&A — CONVERSATIONAL CHAT THREAD
-   ============================================================
-   Maintains real multi-turn history client-side (in memory only —
-   not persisted across page reloads, and never cached/stored, since
-   this may contain whatever the user chooses to ask). Sent with each
-   request so /api/ask can give Gemini the full conversation context,
-   not just the latest message in isolation.
-   ============================================================ */
+/* ---------- AI Q&A — conversational chat thread ---------- */
 
-let chatHistory = []; // [{ role: "user"|"model", text: string }]
+let chatHistory = [];
 
 function appendChatBubble(role, text) {
   const thread = document.getElementById("ai-chat-thread");
