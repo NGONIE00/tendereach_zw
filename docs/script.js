@@ -16,8 +16,18 @@
     } else {
       root.removeAttribute("data-theme");
     }
-    var buttons = document.querySelectorAll(".theme-toggle");
-    buttons.forEach(function (btn) {
+
+    // New switch markup (docs/api SVG version).
+    document.querySelectorAll(".theme-switch").forEach(function (btn) {
+      btn.setAttribute("aria-checked", theme === "dark" ? "true" : "false");
+      btn.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    });
+
+    // Backward-compat: if any page still has the older round emoji
+    // button (.theme-toggle) instead of the new switch, keep it
+    // working too, rather than requiring every page to be updated in
+    // lockstep before anything functions.
+    document.querySelectorAll(".theme-toggle").forEach(function (btn) {
       btn.textContent = theme === "dark" ? "☀" : "☾";
       btn.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
     });
@@ -32,11 +42,17 @@
 
   applyTheme(getPreferredTheme());
 
-  document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".theme-toggle").forEach(function (btn) {
-      btn.addEventListener("click", toggleTheme);
-    });
+  // Event delegation on document, not querySelectorAll+addEventListener
+  // on load — this way the toggle works no matter which button variant
+  // (.theme-switch or the older .theme-toggle) is present on a given
+  // page, and doesn't depend on exact load-order.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest(".theme-switch") || e.target.closest(".theme-toggle")) {
+      toggleTheme();
+    }
+  });
 
+  document.addEventListener("DOMContentLoaded", function () {
     var navToggle = document.querySelector(".nav-toggle");
     var navLinks = document.querySelector(".nav-links");
     if (navToggle && navLinks) {
@@ -49,11 +65,6 @@
     initCarousels();
   });
 
-  /**
-   * Adds a subtle shadow to the sticky nav once the page has scrolled
-   * past the very top — the .nav--scrolled CSS rule already existed
-   * but nothing was ever toggling it; this closes that gap.
-   */
   function initNavScrollShadow() {
     var nav = document.querySelector(".nav");
     if (!nav) return;
