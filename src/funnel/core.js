@@ -1,30 +1,29 @@
 const { route } = require("./router");
 const messages = require("./messages");
 const { checkRateLimit } = require("./rateLimiter");
-const sessionStore = require("./sessionStore");
-const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("./airtable");
-const { answerProcurementQuestion } = require("./answerProcurementQuestion");
+const sessionStore = require("../db/sessionStore");
+const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("../db/airtable");
+const { answerProcurementQuestion } = require("../ai/answerProcurementQuestion");
 
 /**
  * Channel-agnostic core of the funnel. Every channel webhook (WhatsApp,
  * Messenger, Instagram) calls this same function.
  *
- * NOTE: this copy lives in docs/api/_shared/ for the Vercel serverless
- * deployment — dependencies are flat siblings in this same folder,
- * unlike the original src/funnel/core.js where they lived in separate
- * db/ and ai/ subfolders. Use "./whatever" paths here, not "../db/..."
- * or "../ai/...".
+ * ⚠️ THIS FILE'S REQUIRE PATHS ARE DIFFERENT FROM THE OTHER COPY.
  *
- * CHANGE: the "Would you like to join the Founding Supplier Programme?"
- * closing prompt now only appears after the FIRST AI-answered question
- * in a Path 2 conversation, not after every single answer. Without
- * this, a user asking several follow-up questions in a row would see
- * the same nudge repeated after each one, which reads as naggy rather
- * than helpful. We detect "first question" by checking whether
- * session.awaitingClosingReply was already true coming into this turn
- * — if so, they've already seen the nudge once and chose to ask
- * another question instead of answering 1/2, so we just answer
- * plainly this time.
+ * This is src/funnel/core.js — here, sessionStore/airtable live in a
+ * SIBLING "db/" folder and the AI module lives in a sibling "ai/"
+ * folder, so the paths go up one level first: "../db/...", "../ai/...".
+ *
+ * The OTHER copy, docs/api/_shared/core.js, sits in a completely FLAT
+ * folder where every one of these files is a direct sibling — so that
+ * version correctly uses "./sessionStore", "./airtable",
+ * "./answerProcurementQuestion" instead.
+ *
+ * router.js and messages.js ARE identical between both locations
+ * (they only ever import from their own folder). core.js is the one
+ * exception — never copy-paste this file's require lines into the
+ * _shared/ version, or vice versa.
  */
 async function processIncomingMessage(channel, externalId, text, sendFn) {
   const sessionKey = `${channel}:${externalId}`;
@@ -73,8 +72,6 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
         : messages.path2.placeholder + "\n\n" + messages.path2.closingPrompt;
     }
 
-    // Once shown, stays shown for the rest of this Path 2 conversation
-    // — never nag again, but also never re-offer if they already saw it.
     cleanUpdates.awaitingClosingReply = true;
 
     await sessionStore.setSession(sessionKey, cleanUpdates);

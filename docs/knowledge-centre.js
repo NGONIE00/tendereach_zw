@@ -14,6 +14,7 @@
 const SUPABASE_URL = "https://njbvwidesxizthxjzkku.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qYnZ3aWRlc3hpenRoeGp6a2t1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTMyNzksImV4cCI6MjA5OTE2OTI3OX0.4PGc2rSbJlXoth9shHWCpP86tohR-4F6RRe7PHYVz74";
 
+
 const PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 400;
 const MIN_SEARCH_LENGTH = 2;
@@ -201,13 +202,16 @@ function renderResults(rows, count, resultsBody, statusEl) {
     const row = document.createElement("tr");
     const closing = t.closing_date ? new Date(t.closing_date).toLocaleDateString() : "—";
     const categoryDisplay = (t.category_names || "—").split(",")[0].trim();
+    // data-label drives the stacked-card layout on small screens —
+    // see the @media (max-width: 720px) block in styles.css, where each
+    // cell shows its label via td::before content: attr(data-label).
     row.innerHTML = `
-      <td>${escapeHtml(t.reference_number || "—")}</td>
-      <td class="tender-title-cell" title="${escapeHtml(t.title || "")}">${escapeHtml(t.title || "Untitled")}</td>
-      <td>${escapeHtml(categoryDisplay)}</td>
-      <td>${escapeHtml(t.procuring_entity || "—")}</td>
-      <td>${closing}</td>
-      <td>${t.source_url ? `<a href="${escapeHtml(t.source_url)}" target="_blank" rel="noopener">View →</a>` : "—"}</td>
+      <td data-label="Reference #">${escapeHtml(t.reference_number || "—")}</td>
+      <td class="tender-title-cell" data-label="Title" title="${escapeHtml(t.title || "")}">${escapeHtml(t.title || "Untitled")}</td>
+      <td data-label="Category">${escapeHtml(categoryDisplay)}</td>
+      <td data-label="Procuring Entity">${escapeHtml(t.procuring_entity || "—")}</td>
+      <td data-label="Closing">${closing}</td>
+      <td data-label="Source">${t.source_url ? `<a href="${escapeHtml(t.source_url)}" target="_blank" rel="noopener">View →</a>` : "—"}</td>
     `;
     resultsBody.appendChild(row);
   });

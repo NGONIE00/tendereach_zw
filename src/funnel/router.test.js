@@ -147,6 +147,30 @@ describe("Path 2 (Ask a procurement question)", () => {
     expect(followUp.sessionUpdates.__aiQuestion).toBe("What is a bid bond?");
   });
 
+  test("a bare number sent as a question does NOT reach the AI — prevents the infinite loop", () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
+    const { reply, sessionUpdates } = route(session, "2");
+
+    expect(reply).toBe(messages.path2.needsRealQuestion);
+    expect(sessionUpdates.__needsAiAnswer).toBeUndefined();
+  });
+
+  test("a very short scrap of text does NOT reach the AI", () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
+    const { reply, sessionUpdates } = route(session, "ok");
+
+    expect(reply).toBe(messages.path2.needsRealQuestion);
+    expect(sessionUpdates.__needsAiAnswer).toBeUndefined();
+  });
+
+  test("a real question of reasonable length still reaches the AI", () => {
+    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
+    const { reply, sessionUpdates } = route(session, "What is a bid bond?");
+
+    expect(reply).toBeNull();
+    expect(sessionUpdates.__needsAiAnswer).toBe(true);
+  });
+
   test('if awaitingClosingReply is true but the user types something other than "1"/"2", it is treated as a new question', () => {
     const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
     const { reply, sessionUpdates } = route(session, "Actually, when is the closing date for X?");

@@ -1,12 +1,10 @@
 const messages = require("./messages");
 
 /**
- * Pure routing function: given the user's current session and their
- * incoming message text, decide what to reply and how the session
- * should change. No side effects — async work (Gemini, Airtable) is
- * signalled via sessionUpdates flags and handled in core.js.
+ * Pure routing function. No side effects — async work (Gemini,
+ * Airtable) is signalled via sessionUpdates flags, handled in core.js.
  *
- * Keep this file in sync BY HAND across:
+ * Keep in sync BY HAND across:
  *   src/funnel/router.js        (local dev / npm test)
  *   docs/api/_shared/router.js  (live Vercel serverless deployment)
  */
@@ -57,7 +55,6 @@ function route(session, rawText) {
   }
 }
 
-/** e.g. "Question 3 of 7\n" + the actual question text */
 function withProgress(stepNumber, questionText) {
   const total = messages.path1.questions.length;
   return `Question ${stepNumber} of ${total}\n${questionText}`;
@@ -134,14 +131,27 @@ function routePath2(session, text, rawText) {
         },
       };
     }
-    // "Not now" — acknowledge gracefully and let the conversation rest.
-    // Previously this dumped the full welcome menu back at the user,
-    // which read as the bot ignoring their answer and restarting.
-    // currentPath stays "path2" so they can simply ask another
-    // question without re-navigating any menu.
     return {
       reply: messages.path2.closingAcknowledged,
       sessionUpdates: { awaitingClosingReply: false },
+    };
+  }
+
+  // BUGFIX (infinite "2" loop): a bare number or very short scrap of
+  // text is almost never a real procurement question — it's usually a
+  // menu number typed out of habit, or a stray keystroke. Previously
+  // these went straight to Gemini, which replied with a generic "looks
+  // like you sent a number" greeting, then the closing prompt was
+  // appended, so replying "2" again repeated the exact same cycle
+  // forever. Now we ask for a real question instead of burning an AI
+  // call and looping.
+  const isBareNumber = /^\d+$/.test(text);
+  const isTooShort = text.replace(/[^a-z0-9]/gi, "").length < 4;
+
+  if (isBareNumber || isTooShort) {
+    return {
+      reply: messages.path2.needsRealQuestion,
+      sessionUpdates: {},
     };
   }
 

@@ -114,14 +114,30 @@
       <a href="knowledge-centre.html">Knowledge Centre</a>
       <a href="contact.html">Contact</a>
     </div>
-    <div class="nav-actions">
-      <button class="theme-switch" role="switch" aria-checked="false" aria-label="Switch to dark mode">
-        <span class="theme-switch-track">
-          <span class="theme-switch-icon sun">☀</span>
-          <span class="theme-switch-icon moon">☾</span>
-          <span class="theme-switch-thumb"></span>
-        </span>
-      </button>
+    <div class="nav-actions">   
+          <button class="theme-switch" role="switch" aria-checked="false" aria-label="Switch to dark mode">
+            <span class="theme-switch-track">
+              <span class="theme-switch-icon sun" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none"/>
+                  <line x1="12" y1="1.5" x2="12" y2="3.5"/>
+                  <line x1="12" y1="20.5" x2="12" y2="22.5"/>
+                  <line x1="1.5" y1="12" x2="3.5" y2="12"/>
+                  <line x1="20.5" y1="12" x2="22.5" y2="12"/>
+                  <line x1="4.3" y1="4.3" x2="5.8" y2="5.8"/>
+                  <line x1="18.2" y1="18.2" x2="19.7" y2="19.7"/>
+                  <line x1="4.3" y1="19.7" x2="5.8" y2="18.2"/>
+                  <line x1="18.2" y1="5.8" x2="19.7" y2="4.3"/>
+                </svg>
+              </span>
+              <span class="theme-switch-icon moon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.7 13.5A8.5 8.5 0 0 1 10.5 3.3a1 1 0 0 0-1.4-1.1A9.8 9.8 0 1 0 21.8 14.9a1 1 0 0 0-1.1-1.4z"/>
+                </svg>
+              </span>
+              <span class="theme-switch-thumb"></span>
+            </span>
+          </button>
     </div>
   </div>
 </nav>

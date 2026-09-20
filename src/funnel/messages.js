@@ -74,6 +74,22 @@ Example:
      * their choice without re-pushing the menu on them.
      */
     closingAcknowledged: `No problem! 🙏 Feel free to ask another question anytime, or type "menu" to see all options.`,
+
+    /**
+     * Shown when the user sends a bare number or a very short scrap of
+     * text while in Path 2 — usually a menu number typed out of habit.
+     * Previously these were sent to Gemini, which replied with a
+     * generic greeting and then had the closing prompt appended,
+     * creating an infinite loop if the user replied with a number
+     * again. See routePath2 in router.js.
+     */
+    needsRealQuestion: `I'm ready for your procurement question 🙂 Try asking something like:
+
+• "How do I register as a supplier?"
+• "What documents do I need to bid?"
+• "What tenders are open in construction?"
+
+Or type "menu" to see all options.`,
   },
 
   path3: {
