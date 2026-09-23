@@ -59,29 +59,20 @@ Example:
 • "What documents do I need?"
 • "How do I register as a supplier?"`,
 
-    placeholder: `Thanks for your question! 🙏 Our full answering system is still being built. For now, please type your question and a real person from our team will get back to you within 24 hours.`,
-
-    closingPrompt: `Would you like us to also guide you step-by-step through tenders in the Founding Supplier Programme?
-
-1️⃣ Yes
-2️⃣ Not now`,
-
     /**
-     * Shown when the user replies "2" (Not now) to closingPrompt.
-     * Previously this fell through to the full `welcome` menu, which
-     * read as the bot ignoring "not now" and restarting the whole
-     * conversation. This is a graceful close instead — acknowledges
-     * their choice without re-pushing the menu on them.
+     * Fallback when Gemini is unavailable or errors — this used to say
+     * "a real person will get back to you," which was misleading once
+     * the AI actually went live. Now honest about being a temporary
+     * glitch, and offers a real alternative (Path 4) instead of a
+     * vague promise.
      */
-    closingAcknowledged: `No problem! 🙏 Feel free to ask another question anytime, or type "menu" to see all options.`,
+    placeholder: `I'm having a little trouble answering that right now 🙏 Please try again in a moment, or type "4" to speak to our team directly.`,
 
     /**
      * Shown when the user sends a bare number or a very short scrap of
-     * text while in Path 2 — usually a menu number typed out of habit.
-     * Previously these were sent to Gemini, which replied with a
-     * generic greeting and then had the closing prompt appended,
-     * creating an infinite loop if the user replied with a number
-     * again. See routePath2 in router.js.
+     * text while in Path 2 — usually a menu number typed out of habit,
+     * not a real question. Answering these with the AI wasted a call
+     * and (in an earlier version) could loop forever.
      */
     needsRealQuestion: `I'm ready for your procurement question 🙂 Try asking something like:
 
@@ -90,6 +81,14 @@ Example:
 • "What tenders are open in construction?"
 
 Or type "menu" to see all options.`,
+
+    /**
+     * Shown when the user says something like "thanks", "bye", or
+     * "done" while in Path 2 — a graceful, natural end to the
+     * conversation instead of either silence or an unrelated AI
+     * answer to a farewell.
+     */
+    farewell: `You're welcome! 🙏 Come back anytime you have a procurement question — just message us. Type "menu" if you'd like to see all options.`,
   },
 
   path3: {
