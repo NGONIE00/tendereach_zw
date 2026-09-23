@@ -36,7 +36,10 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-html, body { overflow-x: hidden; }
+/* NOTE: deliberately NOT using "overflow-x: hidden" on html/body here —
+   it breaks position:sticky on any descendant (the nav bar included).
+   Text overflow is instead prevented via overflow-wrap/word-wrap on
+   individual text elements below, which is the correct fix. */
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -465,4 +468,19 @@ table.tender-table tr:last-child td { border-bottom: none; }
     font-weight: 600;
   }
   .tender-title-cell::before { padding-top: 0; margin-bottom: 3px; }
+}
+
+/* ---------- Contact page: brand icon badges ----------
+   Fixed-size circle so the WhatsApp/Instagram/Facebook/Email SVG icons
+   never stretch the card — flex-shrink:0 keeps the circle's size
+   locked regardless of the card's own flex/grid context. */
+
+.brand-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
