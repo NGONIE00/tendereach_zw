@@ -4,6 +4,16 @@ const messages = require("./messages");
  * Pure routing function. No side effects — async work (Gemini,
  * Airtable) is signalled via sessionUpdates flags, handled in core.js.
  *
+ * REDESIGN: Path 2 no longer has the rigid "1/2 join the programme"
+ * state machine (awaitingClosingReply is gone entirely) — it was the
+ * source of multiple bugs (an infinite loop, an awkward forced
+ * ending) and didn't read naturally. Now: real multi-turn memory
+ * lives in session.aiConversationHistory (managed in core.js), the AI
+ * itself decides when a natural follow-up question makes sense (see
+ * gemini.js's system instruction), and a handful of farewell phrases
+ * ("thanks", "bye", "done") end the conversation gracefully instead
+ * of being sent to the AI as if they were procurement questions.
+ *
  * Keep in sync BY HAND across:
  *   src/funnel/router.js        (local dev / npm test)
  *   docs/api/_shared/router.js  (live Vercel serverless deployment)
@@ -70,7 +80,7 @@ function routeTopLevelMenu(text) {
     case "2":
       return {
         reply: messages.path2.prompt,
-        sessionUpdates: { currentPath: "path2", internalTag: "Active User" },
+        sessionUpdates: { currentPath: "path2", internalTag: "Active User", aiConversationHistory: [] },
       };
     case "3":
       return {
@@ -118,33 +128,16 @@ function routePath1(session, text, rawText) {
   };
 }
 
+const FAREWELL_PATTERN = /^(thanks|thank you|thankyou|thanks a lot|ty|bye|goodbye|done|no more questions|that's all|that is all|no thanks|nothing else)[\s!.]*$/i;
+
 function routePath2(session, text, rawText) {
-  if (session.awaitingClosingReply && (text === "1" || text === "2")) {
-    if (text === "1") {
-      return {
-        reply: messages.path1.intro + "\n\n" + withProgress(1, messages.path1.questions[0]),
-        sessionUpdates: {
-          currentPath: "path1",
-          interviewStep: 1,
-          internalTag: "Warm Lead",
-          awaitingClosingReply: false,
-        },
-      };
-    }
+  if (FAREWELL_PATTERN.test(text)) {
     return {
-      reply: messages.path2.closingAcknowledged,
-      sessionUpdates: { awaitingClosingReply: false },
+      reply: messages.path2.farewell,
+      sessionUpdates: { currentPath: null, aiConversationHistory: [] },
     };
   }
 
-  // BUGFIX (infinite "2" loop): a bare number or very short scrap of
-  // text is almost never a real procurement question — it's usually a
-  // menu number typed out of habit, or a stray keystroke. Previously
-  // these went straight to Gemini, which replied with a generic "looks
-  // like you sent a number" greeting, then the closing prompt was
-  // appended, so replying "2" again repeated the exact same cycle
-  // forever. Now we ask for a real question instead of burning an AI
-  // call and looping.
   const isBareNumber = /^\d+$/.test(text);
   const isTooShort = text.replace(/[^a-z0-9]/gi, "").length < 4;
 
