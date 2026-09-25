@@ -6,25 +6,18 @@ const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = 
 const { answerProcurementQuestion } = require("./answerProcurementQuestion");
 
 /**
- * Channel-agnostic core of the funnel. Every channel webhook (WhatsApp,
- * Messenger, Instagram) calls this same function.
+ * ⚠️ THIS IS THE FLAT-FOLDER VERSION — goes to docs/api/_shared/core.js
+ * ONLY. sessionStore/airtable/answerProcurementQuestion are direct
+ * siblings in that folder, hence the "./" paths. Do NOT copy this into
+ * src/funnel/core.js — that one needs "../db/..." and "../ai/..."
+ * instead (a separate file, core-for-src-funnel.js).
  *
- * NOTE: this copy lives in docs/api/_shared/ for the Vercel serverless
- * deployment — dependencies are flat siblings in this same folder,
- * unlike the original src/funnel/core.js where they lived in separate
- * db/ and ai/ subfolders. Use "./whatever" paths here, not "../db/..."
- * or "../ai/...".
- *
- * CHANGE: the "Would you like to join the Founding Supplier Programme?"
- * closing prompt now only appears after the FIRST AI-answered question
- * in a Path 2 conversation, not after every single answer. Without
- * this, a user asking several follow-up questions in a row would see
- * the same nudge repeated after each one, which reads as naggy rather
- * than helpful. We detect "first question" by checking whether
- * session.awaitingClosingReply was already true coming into this turn
- * — if so, they've already seen the nudge once and chose to ask
- * another question instead of answering 1/2, so we just answer
- * plainly this time.
+ * REDESIGN: no more closingPrompt / awaitingClosingReply state machine.
+ * Real multi-turn memory now lives in session.aiConversationHistory —
+ * capped at the last 10 exchanges, passed to Gemini on every call, and
+ * persisted back to the session after each answer. Cleared whenever
+ * Path 2 is freshly entered or the conversation ends via a farewell
+ * phrase (see router.js).
  */
 async function processIncomingMessage(channel, externalId, text, sendFn) {
   const sessionKey = `${channel}:${externalId}`;
@@ -43,9 +36,7 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
     try {
       const result = await deleteFoundingSupplierRecordByContact(channel, externalId);
       if (result.deleted > 0) {
-        console.log(
-          `Deleted ${result.deleted} Airtable record(s) for user-requested deletion (${channel}).`
-        );
+        console.log(`Deleted ${result.deleted} Airtable record(s) for user-requested deletion (${channel}).`);
       }
     } catch (err) {
       console.error("Failed to delete Airtable record on user request:", err.message);
@@ -57,25 +48,26 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
   if (sessionUpdates.__needsAiAnswer) {
     const { __needsAiAnswer, __aiQuestion, ...cleanUpdates } = sessionUpdates;
     const question = __aiQuestion;
-    const alreadyPromptedThisSession = session.awaitingClosingReply === true;
+    const history = Array.isArray(session.aiConversationHistory) ? session.aiConversationHistory : [];
 
     let finalReply;
+    let updatedHistory = history;
+
     try {
-      const aiAnswer = await answerProcurementQuestion(question);
-      const answerText = aiAnswer || messages.path2.placeholder;
-      finalReply = alreadyPromptedThisSession
-        ? answerText
-        : answerText + "\n\n" + messages.path2.closingPrompt;
+      const aiAnswer = await answerProcurementQuestion(question, history);
+      if (aiAnswer) {
+        finalReply = aiAnswer;
+        updatedHistory = [...history, { role: "user", text: question }, { role: "model", text: aiAnswer }].slice(-20);
+      } else {
+        finalReply = messages.path2.placeholder;
+        // Don't pollute history with a failed exchange.
+      }
     } catch (err) {
       console.error("Unexpected error answering procurement question:", err.message);
-      finalReply = alreadyPromptedThisSession
-        ? messages.path2.placeholder
-        : messages.path2.placeholder + "\n\n" + messages.path2.closingPrompt;
+      finalReply = messages.path2.placeholder;
     }
 
-    // Once shown, stays shown for the rest of this Path 2 conversation
-    // — never nag again, but also never re-offer if they already saw it.
-    cleanUpdates.awaitingClosingReply = true;
+    cleanUpdates.aiConversationHistory = updatedHistory;
 
     await sessionStore.setSession(sessionKey, cleanUpdates);
     await sendFn(externalId, finalReply);
@@ -90,10 +82,7 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
       await createFoundingSupplierRecord(updatedSession, channel, externalId);
       console.log(`Founding Supplier record created in Airtable (${channel}).`);
     } catch (err) {
-      console.error(
-        "Failed to persist completed interview to Airtable — needs manual follow-up:",
-        err.message
-      );
+      console.error("Failed to persist completed interview to Airtable — needs manual follow-up:", err.message);
     }
   }
 

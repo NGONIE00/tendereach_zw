@@ -1,29 +1,23 @@
 const { route } = require("./router");
 const messages = require("./messages");
 const { checkRateLimit } = require("./rateLimiter");
-const sessionStore = require("../db/sessionStore");
-const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("../db/airtable");
-const { answerProcurementQuestion } = require("../ai/answerProcurementQuestion");
+const sessionStore = require("./sessionStore");
+const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("./airtable");
+const { answerProcurementQuestion } = require("./answerProcurementQuestion");
 
 /**
- * Channel-agnostic core of the funnel. Every channel webhook (WhatsApp,
- * Messenger, Instagram) calls this same function.
+ * ⚠️ THIS IS THE FLAT-FOLDER VERSION — goes to docs/api/_shared/core.js
+ * ONLY. sessionStore/airtable/answerProcurementQuestion are direct
+ * siblings in that folder, hence the "./" paths. Do NOT copy this into
+ * src/funnel/core.js — that one needs "../db/..." and "../ai/..."
+ * instead (a separate file, core-for-src-funnel.js).
  *
- * ⚠️ THIS FILE'S REQUIRE PATHS ARE DIFFERENT FROM THE OTHER COPY.
- *
- * This is src/funnel/core.js — here, sessionStore/airtable live in a
- * SIBLING "db/" folder and the AI module lives in a sibling "ai/"
- * folder, so the paths go up one level first: "../db/...", "../ai/...".
- *
- * The OTHER copy, docs/api/_shared/core.js, sits in a completely FLAT
- * folder where every one of these files is a direct sibling — so that
- * version correctly uses "./sessionStore", "./airtable",
- * "./answerProcurementQuestion" instead.
- *
- * router.js and messages.js ARE identical between both locations
- * (they only ever import from their own folder). core.js is the one
- * exception — never copy-paste this file's require lines into the
- * _shared/ version, or vice versa.
+ * REDESIGN: no more closingPrompt / awaitingClosingReply state machine.
+ * Real multi-turn memory now lives in session.aiConversationHistory —
+ * capped at the last 10 exchanges, passed to Gemini on every call, and
+ * persisted back to the session after each answer. Cleared whenever
+ * Path 2 is freshly entered or the conversation ends via a farewell
+ * phrase (see router.js).
  */
 async function processIncomingMessage(channel, externalId, text, sendFn) {
   const sessionKey = `${channel}:${externalId}`;
@@ -42,9 +36,7 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
     try {
       const result = await deleteFoundingSupplierRecordByContact(channel, externalId);
       if (result.deleted > 0) {
-        console.log(
-          `Deleted ${result.deleted} Airtable record(s) for user-requested deletion (${channel}).`
-        );
+        console.log(`Deleted ${result.deleted} Airtable record(s) for user-requested deletion (${channel}).`);
       }
     } catch (err) {
       console.error("Failed to delete Airtable record on user request:", err.message);
@@ -56,23 +48,26 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
   if (sessionUpdates.__needsAiAnswer) {
     const { __needsAiAnswer, __aiQuestion, ...cleanUpdates } = sessionUpdates;
     const question = __aiQuestion;
-    const alreadyPromptedThisSession = session.awaitingClosingReply === true;
+    const history = Array.isArray(session.aiConversationHistory) ? session.aiConversationHistory : [];
 
     let finalReply;
+    let updatedHistory = history;
+
     try {
-      const aiAnswer = await answerProcurementQuestion(question);
-      const answerText = aiAnswer || messages.path2.placeholder;
-      finalReply = alreadyPromptedThisSession
-        ? answerText
-        : answerText + "\n\n" + messages.path2.closingPrompt;
+      const aiAnswer = await answerProcurementQuestion(question, history);
+      if (aiAnswer) {
+        finalReply = aiAnswer;
+        updatedHistory = [...history, { role: "user", text: question }, { role: "model", text: aiAnswer }].slice(-20);
+      } else {
+        finalReply = messages.path2.placeholder;
+        // Don't pollute history with a failed exchange.
+      }
     } catch (err) {
       console.error("Unexpected error answering procurement question:", err.message);
-      finalReply = alreadyPromptedThisSession
-        ? messages.path2.placeholder
-        : messages.path2.placeholder + "\n\n" + messages.path2.closingPrompt;
+      finalReply = messages.path2.placeholder;
     }
 
-    cleanUpdates.awaitingClosingReply = true;
+    cleanUpdates.aiConversationHistory = updatedHistory;
 
     await sessionStore.setSession(sessionKey, cleanUpdates);
     await sendFn(externalId, finalReply);
@@ -87,10 +82,7 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
       await createFoundingSupplierRecord(updatedSession, channel, externalId);
       console.log(`Founding Supplier record created in Airtable (${channel}).`);
     } catch (err) {
-      console.error(
-        "Failed to persist completed interview to Airtable — needs manual follow-up:",
-        err.message
-      );
+      console.error("Failed to persist completed interview to Airtable — needs manual follow-up:", err.message);
     }
   }
 
