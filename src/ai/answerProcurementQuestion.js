@@ -4,14 +4,14 @@ const { getTenderContextText } = require("./tenderContext");
 /**
  * Main entry point for answering a procurement question — used by
  * src/funnel/core.js for WhatsApp Path 2. Never throws: on any failure
- * (missing API key, Gemini error, network issue) it returns null so
- * the caller can fall back to the existing placeholder message rather
- * than the user seeing a broken reply.
+ * it returns null so the caller falls back to messages.path2.placeholder.
  *
  * @param {string} question
- * @returns {Promise<string|null>} the answer, or null if unavailable
+ * @param {Array<{role: "user"|"model", text: string}>} [history] - real
+ *   multi-turn conversation memory, oldest first
+ * @returns {Promise<string|null>}
  */
-async function answerProcurementQuestion(question) {
+async function answerProcurementQuestion(question, history = []) {
   if (!process.env.GEMINI_API_KEY) {
     console.warn("[ai] GEMINI_API_KEY not set — falling back to placeholder response.");
     return null;
@@ -25,7 +25,7 @@ async function answerProcurementQuestion(question) {
   }
 
   try {
-    return await askGemini(question, tenderContext);
+    return await askGemini(question, tenderContext, history);
   } catch (err) {
     console.error("[ai] Gemini call failed:", err.message);
     return null;
