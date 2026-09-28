@@ -8,7 +8,7 @@ function freshSession(overrides = {}) {
     interviewStep: 0,
     interviewAnswers: [],
     internalTag: "Cold Lead",
-    awaitingClosingReply: false,
+    aiConversationHistory: [],
     ...overrides,
   };
 }
@@ -23,10 +23,11 @@ describe("top-level menu routing", () => {
     expect(sessionUpdates.internalTag).toBe("Founding Lead");
   });
 
-  test("choosing 2 enters the procurement question path", () => {
+  test("choosing 2 enters the procurement question path with a fresh conversation history", () => {
     const { reply, sessionUpdates } = route(freshSession(), "2");
     expect(reply).toBe(messages.path2.prompt);
     expect(sessionUpdates.currentPath).toBe("path2");
+    expect(sessionUpdates.aiConversationHistory).toEqual([]);
   });
 
   test("choosing 3 shows info and CTA", () => {
@@ -95,8 +96,8 @@ describe("Founding Supplier interview flow (Path 1)", () => {
   });
 });
 
-describe("Path 2 (Ask a procurement question)", () => {
-  test("a question asked right after entering path2 signals __needsAiAnswer instead of replying directly", () => {
+describe("Path 2 (Ask a procurement question) — redesigned, no more state machine", () => {
+  test("a real question signals __needsAiAnswer instead of replying directly", () => {
     const session = freshSession({ currentPath: "path2" });
     const { reply, sessionUpdates } = route(session, "How do I register as a supplier?");
 
@@ -106,49 +107,16 @@ describe("Path 2 (Ask a procurement question)", () => {
     expect(sessionUpdates.internalTag).toBe("Active User");
   });
 
-  test("a second question also signals __needsAiAnswer as long as awaitingClosingReply isn't set", () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
-    const { reply, sessionUpdates } = route(session, "What documents do I need?");
+  test("a follow-up question also reaches the AI — no forced menu in between", () => {
+    const session = freshSession({ currentPath: "path2" });
+    const { reply, sessionUpdates } = route(session, "What about for construction tenders specifically?");
 
     expect(reply).toBeNull();
     expect(sessionUpdates.__needsAiAnswer).toBe(true);
   });
 
-  test('once awaitingClosingReply is true, replying "1" routes into the Founding Supplier interview', () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
-    const { reply, sessionUpdates } = route(session, "1");
-
-    expect(reply).toContain("Question 1 of 7");
-    expect(sessionUpdates.currentPath).toBe("path1");
-    expect(sessionUpdates.internalTag).toBe("Warm Lead");
-    expect(sessionUpdates.awaitingClosingReply).toBe(false);
-  });
-
-  test('replying "2" (Not now) closes gracefully without dumping the full menu, and stays in path2', () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
-    const { reply, sessionUpdates } = route(session, "2");
-
-    expect(reply).toBe(messages.path2.closingAcknowledged);
-    expect(reply).not.toBe(messages.welcome);
-    expect(sessionUpdates.awaitingClosingReply).toBe(false);
-    // currentPath intentionally not reset — user can just ask another
-    // question without navigating a menu again.
-    expect(sessionUpdates.currentPath).toBeUndefined();
-  });
-
-  test('after declining with "2", a further question still reaches the AI', () => {
-    let session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
-    const declined = route(session, "2");
-    session = { ...session, ...declined.sessionUpdates };
-
-    const followUp = route(session, "What is a bid bond?");
-    expect(followUp.reply).toBeNull();
-    expect(followUp.sessionUpdates.__needsAiAnswer).toBe(true);
-    expect(followUp.sessionUpdates.__aiQuestion).toBe("What is a bid bond?");
-  });
-
-  test("a bare number sent as a question does NOT reach the AI — prevents the infinite loop", () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
+  test("a bare number does NOT reach the AI — prevents the old infinite-loop bug", () => {
+    const session = freshSession({ currentPath: "path2" });
     const { reply, sessionUpdates } = route(session, "2");
 
     expect(reply).toBe(messages.path2.needsRealQuestion);
@@ -156,27 +124,33 @@ describe("Path 2 (Ask a procurement question)", () => {
   });
 
   test("a very short scrap of text does NOT reach the AI", () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
+    const session = freshSession({ currentPath: "path2" });
     const { reply, sessionUpdates } = route(session, "ok");
 
     expect(reply).toBe(messages.path2.needsRealQuestion);
     expect(sessionUpdates.__needsAiAnswer).toBeUndefined();
   });
 
-  test("a real question of reasonable length still reaches the AI", () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: false });
-    const { reply, sessionUpdates } = route(session, "What is a bid bond?");
+  describe("farewell detection", () => {
+    const farewells = ["thanks", "Thank you", "thankyou", "bye", "Goodbye", "done", "that's all", "no thanks"];
 
-    expect(reply).toBeNull();
-    expect(sessionUpdates.__needsAiAnswer).toBe(true);
-  });
+    test.each(farewells)('"%s" ends the conversation gracefully instead of being sent to the AI', (phrase) => {
+      const session = freshSession({ currentPath: "path2" });
+      const { reply, sessionUpdates } = route(session, phrase);
 
-  test('if awaitingClosingReply is true but the user types something other than "1"/"2", it is treated as a new question', () => {
-    const session = freshSession({ currentPath: "path2", awaitingClosingReply: true });
-    const { reply, sessionUpdates } = route(session, "Actually, when is the closing date for X?");
+      expect(reply).toBe(messages.path2.farewell);
+      expect(sessionUpdates.__needsAiAnswer).toBeUndefined();
+      expect(sessionUpdates.currentPath).toBeNull();
+      expect(sessionUpdates.aiConversationHistory).toEqual([]);
+    });
 
-    expect(reply).toBeNull();
-    expect(sessionUpdates.__needsAiAnswer).toBe(true);
+    test('a question that happens to contain "thanks" mid-sentence is NOT treated as a farewell', () => {
+      const session = freshSession({ currentPath: "path2" });
+      const { reply, sessionUpdates } = route(session, "Thanks, but what documents do I need to bid?");
+
+      expect(reply).toBeNull();
+      expect(sessionUpdates.__needsAiAnswer).toBe(true);
+    });
   });
 });
 

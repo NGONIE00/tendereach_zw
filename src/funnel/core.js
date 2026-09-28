@@ -1,23 +1,20 @@
 const { route } = require("./router");
 const messages = require("./messages");
 const { checkRateLimit } = require("./rateLimiter");
-const sessionStore = require("./sessionStore");
-const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("./airtable");
-const { answerProcurementQuestion } = require("./answerProcurementQuestion");
+const sessionStore = require("../db/sessionStore");
+const { createFoundingSupplierRecord, deleteFoundingSupplierRecordByContact } = require("../db/airtable");
+const { answerProcurementQuestion } = require("../ai/answerProcurementQuestion");
 
 /**
- * ⚠️ THIS IS THE FLAT-FOLDER VERSION — goes to docs/api/_shared/core.js
- * ONLY. sessionStore/airtable/answerProcurementQuestion are direct
- * siblings in that folder, hence the "./" paths. Do NOT copy this into
- * src/funnel/core.js — that one needs "../db/..." and "../ai/..."
- * instead (a separate file, core-for-src-funnel.js).
+ * ⚠️ NESTED-FOLDER VERSION — goes to src/funnel/core.js ONLY.
+ * sessionStore/airtable live in a sibling "db/" folder, the AI module
+ * in a sibling "ai/" folder, hence "../db/...", "../ai/...". Do NOT
+ * copy this into docs/api/_shared/core.js — that one needs "./..."
+ * paths instead (a separate file, core-for-docs-shared.js).
  *
- * REDESIGN: no more closingPrompt / awaitingClosingReply state machine.
- * Real multi-turn memory now lives in session.aiConversationHistory —
- * capped at the last 10 exchanges, passed to Gemini on every call, and
- * persisted back to the session after each answer. Cleared whenever
- * Path 2 is freshly entered or the conversation ends via a farewell
- * phrase (see router.js).
+ * Same redesign as the deployed copy: no more closingPrompt /
+ * awaitingClosingReply state machine. Real multi-turn memory lives in
+ * session.aiConversationHistory.
  */
 async function processIncomingMessage(channel, externalId, text, sendFn) {
   const sessionKey = `${channel}:${externalId}`;
@@ -60,7 +57,6 @@ async function processIncomingMessage(channel, externalId, text, sendFn) {
         updatedHistory = [...history, { role: "user", text: question }, { role: "model", text: aiAnswer }].slice(-20);
       } else {
         finalReply = messages.path2.placeholder;
-        // Don't pollute history with a failed exchange.
       }
     } catch (err) {
       console.error("Unexpected error answering procurement question:", err.message);
