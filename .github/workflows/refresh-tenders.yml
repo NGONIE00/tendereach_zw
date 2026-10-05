@@ -1,20 +1,18 @@
 name: Refresh Tender Index
 
-# Runs the PRAZ tender scraper automatically every 6 hours, plus allows
-# manually triggering it from the GitHub Actions tab (Run workflow
-# button) for testing or an on-demand refresh.
+# Runs the PRAZ tender scraper every 6 hours, and can be triggered
+# manually from the Actions tab ("Run workflow").
 #
-# SETUP REQUIRED before this works — add these as GitHub repo secrets
-# (Settings -> Secrets and variables -> Actions -> New repository secret):
-#   SUPABASE_URL
-#   SUPABASE_SERVICE_ROLE_KEY
-# These are the only two the scraper needs — it doesn't touch
-# WhatsApp/Gemini/Airtable at all.
+# REQUIRED SECRETS (Settings -> Secrets and variables -> Actions ->
+# the "Secrets" tab, NOT the "Variables" tab):
+#   SUPABASE_URL                 e.g. https://xxxxx.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY    the service_role key, not the anon key
+# Names are case-sensitive and must match exactly.
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours, UTC
-  workflow_dispatch: {}       # manual "Run workflow" button in GitHub UI
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
 
 jobs:
   scrape:
@@ -23,10 +21,22 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
+      # Fail fast: if a secret is missing, stop now instead of politely
+      # scraping 39 pages of PRAZ only to fail at the save step.
+      - name: Verify Supabase secrets are configured
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY is empty. Add both under Settings > Secrets and variables > Actions > Secrets (not Variables), with these exact names."
+            exit 1
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install dependencies
         run: npm install
