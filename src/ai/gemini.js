@@ -1,3 +1,5 @@
+const { FORMATTING_RULES, formatForChat } = require("./formatForChat");
+
 const GEMINI_MODEL = "gemini-3.6-flash";
 const MAX_HISTORY_TURNS = 10; // 10 user+model pairs — real memory without unbounded cost growth
 
@@ -38,7 +40,7 @@ async function askGemini(question, tenderContext = "", history = []) {
     throw new Error("GEMINI_API_KEY is not set.");
   }
 
-  const systemInstruction = SYSTEM_INSTRUCTION + (tenderContext ? `\n\n${tenderContext}` : "");
+  const systemInstruction = SYSTEM_INSTRUCTION + "\n\n" + FORMATTING_RULES + (tenderContext ? `\n\n${tenderContext}` : "");
 
   const safeHistory = Array.isArray(history)
     ? history
@@ -82,7 +84,7 @@ async function askGemini(question, tenderContext = "", history = []) {
     console.warn("[gemini] Answer hit the token limit and may be truncated.");
   }
 
-  return answer.trim();
+  return formatForChat(answer);
 }
 
 module.exports = { askGemini, SYSTEM_INSTRUCTION };
